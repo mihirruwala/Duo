@@ -8,6 +8,7 @@ import { SetupRequired } from "@/components/duo/setup-required";
 import { Button } from "@/components/ui/button";
 import { CreateRoomDialog } from "@/features/rooms/components/create-room-dialog";
 import { JoinCodeForm } from "@/features/rooms/components/join-code-form";
+import { AlertsControl, HomePresence, RoomPresenceStatus } from "@/features/presence/components/home-presence";
 import { NewInviteButton } from "@/features/rooms/components/new-invite-button";
 import { getMyProfile, listMyRooms, type RoomWithMembers } from "@/features/rooms/server/queries";
 import { isConfigured } from "@/lib/env";
@@ -31,6 +32,9 @@ export default async function HomePage() {
           <div>
             <h1 className="text-4xl font-extrabold sm:text-5xl">Hey {name} 👋</h1>
             <p className="mt-2 text-lg text-muted-foreground">Pick up where you left off, or open a new space.</p>
+            <div className="mt-3">
+              <AlertsControl />
+            </div>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
             <JoinCodeForm />
@@ -41,11 +45,21 @@ export default async function HomePage() {
         {rooms.length === 0 ? (
           <EmptyState />
         ) : (
-          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-label="Your rooms">
-            {rooms.map((room) => (
-              <RoomCard key={room.id} room={room} myId={user.id} />
-            ))}
-          </ul>
+          <HomePresence
+            myId={user.id}
+            rooms={rooms.map((r) => ({
+              id: r.id,
+              slug: r.slug,
+              name: r.name,
+              partnerName: r.members.find((m) => m.userId !== user.id)?.displayName ?? null,
+            }))}
+          >
+            <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-label="Your rooms">
+              {rooms.map((room) => (
+                <RoomCard key={room.id} room={room} myId={user.id} />
+              ))}
+            </ul>
+          </HomePresence>
         )}
       </main>
     </div>
@@ -67,18 +81,14 @@ function RoomCard({ room, myId }: { room: RoomWithMembers; myId: string }) {
           ))}
         </div>
       </div>
-      <p className="flex items-center gap-2 text-sm text-muted-foreground">
-        {partner ? (
-          <>
-            <span className="size-2 rounded-full bg-violet" aria-hidden /> With {partner.displayName}
-          </>
-        ) : (
-          <>
-            <Hourglass className="size-4 text-sun" aria-hidden />
-            {inviteLive ? "Invite sent, waiting for your person" : "Invite expired, send a new one"}
-          </>
-        )}
-      </p>
+      {partner ? (
+        <RoomPresenceStatus roomId={room.id} slug={room.slug} partnerName={partner.displayName} />
+      ) : (
+        <p className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Hourglass className="size-4 text-sun" aria-hidden />
+          {inviteLive ? "Invite sent, waiting for your person" : "Invite expired, send a new one"}
+        </p>
+      )}
       <div className="mt-auto flex flex-wrap items-center gap-2">
         <Button asChild size="sm">
           <Link href={`/r/${room.slug}`}>

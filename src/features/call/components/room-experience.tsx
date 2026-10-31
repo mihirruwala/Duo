@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useState } from "react";
 import { DoorOpen, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ChatProvider, type Person } from "@/features/chat/chat-provider";
+import { ChatProvider, useMaybeChat, type Person } from "@/features/chat/chat-provider";
+import { usePresenceAlerts } from "@/features/presence/use-presence-alerts";
 import { ChatDock } from "@/features/chat/components/chat-dock";
 import { FEATURES } from "@/shared/features";
 import { callTokenResponseSchema, type CallTokenResponse } from "@/shared/call";
@@ -66,6 +67,9 @@ function RoomPhases({
   const myHue = me.hue;
   const partnerName = partner?.name ?? null;
   const [phase, setPhase] = useState<Phase>({ kind: "precall" });
+  const chat = useMaybeChat();
+  const inCall = phase.kind === "call";
+  usePresenceAlerts({ chat, inCall, roomName, partnerName, url: `/r/${slug}` });
   const [joining, setJoining] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
 
@@ -109,6 +113,8 @@ function RoomPhases({
       joinError={joinError}
       onJoin={(prefs) => void join(prefs)}
       aside={aside}
+      presence={chat?.partnerPresence}
+      onKnock={chat?.knock}
     />
   );
 }

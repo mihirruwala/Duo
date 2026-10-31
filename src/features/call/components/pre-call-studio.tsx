@@ -8,7 +8,9 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { FEATURES } from "@/shared/features";
 import type { DevicePrefs } from "../device-prefs";
+import { PresenceBanner } from "@/features/presence/components/presence-banner";
 import { StudioPanel } from "@/features/studio/components/studio-panel";
+import type { PartnerPresence } from "@/shared/presence";
 import { useStudioTrack } from "@/features/studio/use-studio-track";
 import { studioSummary } from "@/features/studio/summary";
 import { usePreviewMedia } from "../use-preview-media";
@@ -25,9 +27,23 @@ type Props = {
   joinError: string | null;
   onJoin: (prefs: DevicePrefs) => void;
   aside?: React.ReactNode;
+  /** Live "where is my person" (absent when chat/presence isn't available). */
+  presence?: PartnerPresence;
+  onKnock?: () => boolean;
 };
 
-export function PreCallStudio({ roomName, myName, myHue, partnerName, joining, joinError, onJoin, aside }: Props) {
+export function PreCallStudio({
+  roomName,
+  myName,
+  myHue,
+  partnerName,
+  joining,
+  joinError,
+  onJoin,
+  aside,
+  presence,
+  onKnock,
+}: Props) {
   const media = usePreviewMedia();
   const { prefs, video, audio, devices } = media;
   const studio = useStudioTrack(video);
@@ -46,6 +62,15 @@ export function PreCallStudio({ roomName, myName, myHue, partnerName, joining, j
   return (
     <div className="mx-auto grid w-full max-w-6xl gap-6 px-4 pt-2 pb-12 sm:px-6 lg:grid-cols-[1.4fr_1fr]">
       <section aria-label="Camera preview" className="flex flex-col gap-4">
+        {partnerName && presence && onKnock && (
+          <PresenceBanner
+            partnerName={partnerName}
+            presence={presence}
+            onJoin={() => onJoin(prefs)}
+            onKnock={onKnock}
+            joining={joining}
+          />
+        )}
         <div className="relative aspect-video overflow-hidden rounded-[2rem] bg-ink-0 ring-1 ring-white/8 shadow-[var(--duo-shadow-lg)]">
           {video ? (
             <LocalVideo track={video} />

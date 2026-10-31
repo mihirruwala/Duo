@@ -6,6 +6,7 @@ import { getBrowserClient } from "@/lib/supabase/client";
 import type { Gif, StickerId } from "@/shared/chat";
 import type { AttachmentRow, MessageKind, MessageRow, MomentRow, ReactionRow, ReceiptRow } from "@/shared/database";
 import { friendlyError } from "@/shared/errors";
+import { KNOCK_COOLDOWN_MS, KNOCK_EVENT, OFFLINE, partnerPresenceFrom, type PartnerPresence } from "@/shared/presence";
 import { chatReducer, initialChatState, orderedMessages, type ChatMessage, type ChatState } from "./chat-reducer";
 import { imageSize, uploadFile, validateFile } from "./uploads";
 
@@ -23,6 +24,12 @@ type ChatApi = {
   people: Record<string, Person>;
   partnerTyping: boolean;
   partnerOnline: boolean;
+  /** Where the other person is right now (Home, this room, or in the call). */
+  partnerPresence: PartnerPresence;
+  setInCall: (inCall: boolean) => void;
+  /** Ping the other person ("I'm here, join me?"). Returns false while cooling down. */
+  knock: () => boolean;
+  onKnock: (listener: () => void) => () => void;
   connected: boolean;
   unread: number;
   /** Partner's watermark, for Sent / Delivered / Read on my messages. */
@@ -43,6 +50,11 @@ type ChatApi = {
 };
 
 const ChatContext = createContext<ChatApi | null>(null);
+
+/** For components that also render without chat (returns null outside the provider). */
+export function useMaybeChat(): ChatApi | null {
+  return use(ChatContext);
+}
 
 export function useChat(): ChatApi {
   const ctx = use(ChatContext);
@@ -105,7 +117,11 @@ export function ChatProvider({
   const [state, dispatch] = useReducer(chatReducer, initialChatState);
   const [partnerTypingAt, setPartnerTypingAt] = useState(0);
   const [now, setNow] = useState(() => Date.now());
-  const [partnerOnline, setPartnerOnline] = useState(false);
+  const [partnerPresence, setPartnerPresence] = useState<PartnerPresence>(OFFLINE);
+  const partnerOnline = partnerPresence.online;
+  const inCallRef = useRef(false);
+  const lastKnockSent = useRef(0);
+  const knockListeners = useRef(new Set<() => void>());
   const [connected, setConnected] = useState(false);
   const [viewing, setViewing] = useState(false);
 
@@ -244,6 +260,11 @@ export function ChatProvider({
       });
       channel
         .on("broadcast", { event: "*" }, ({ event, payload }) => {
+          if (event === KNOCK_EVENT) {
+            const p = payload as { userId?: string };
+            if (p.userId && p.userId !== me.id) knockListeners.current.forEach((l) => l());
+            return;
+          }
           if (event === "typing") {
             const p = payload as { userId?: string; stop?: boolean };
             if (p.userId && p.userId !== me.id) setPartnerTypingAt(p.stop ? 0 : Date.now());
@@ -253,14 +274,13 @@ export function ChatProvider({
           applyChange(p.table, p.operation, p.record, p.old_record);
         })
         .on("presence", { event: "sync" }, () => {
-          const states = channel.presenceState();
-          setPartnerOnline(Object.keys(states).some((k) => k !== me.id));
+          setPartnerPresence(partnerPresenceFrom(channel.presenceState() as Record<string, unknown[]>, me.id));
         })
         .subscribe((status) => {
           if (!alive) return;
           if (status === "SUBSCRIBED") {
             setConnected(true);
-            void channel.track({ online_at: new Date().toISOString() });
+            void channel.track({ where: "room", inCall: inCallRef.current, at: new Date().toISOString() });
             if (firstSubscribe) {
               firstSubscribe = false;
               void loadLatest();
@@ -553,6 +573,27 @@ export function ChatProvider({
     return null;
   }, []);
 
+  const setInCall = useCallback((inCall: boolean) => {
+    if (inCallRef.current === inCall) return;
+    inCallRef.current = inCall;
+    void channelRef.current?.track({ where: "room", inCall, at: new Date().toISOString() });
+  }, []);
+
+  const knock = useCallback(() => {
+    const now = Date.now();
+    if (now - lastKnockSent.current < KNOCK_COOLDOWN_MS || !channelRef.current) return false;
+    lastKnockSent.current = now;
+    void channelRef.current.send({ type: "broadcast", event: KNOCK_EVENT, payload: { userId: me.id } });
+    return true;
+  }, [me.id]);
+
+  const onKnock = useCallback((listener: () => void) => {
+    knockListeners.current.add(listener);
+    return () => {
+      knockListeners.current.delete(listener);
+    };
+  }, []);
+
   const api: ChatApi = {
     state,
     messages,
@@ -561,6 +602,10 @@ export function ChatProvider({
     people,
     partnerTyping,
     partnerOnline,
+    partnerPresence,
+    setInCall,
+    knock,
+    onKnock,
     connected,
     unread,
     partnerReceipt,
