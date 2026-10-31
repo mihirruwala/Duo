@@ -120,6 +120,26 @@ export type Database = {
         Returns: boolean;
       };
       control_request: { Args: { p_room_id: string }; Returns: ControlSessionRow };
+      mark_receipts: {
+        Args: { p_room_id: string; p_delivered_seq: number; p_read_seq: number };
+        Returns: ReceiptRow;
+      };
+      send_attachment_message: {
+        Args: {
+          p_room_id: string;
+          p_client_id: string;
+          p_kind: MessageKind;
+          p_body: string | null;
+          p_reply_to: string | null;
+          p_storage_path: string;
+          p_mime_type: string;
+          p_size_bytes: number;
+          p_file_name: string;
+          p_width: number | null;
+          p_height: number | null;
+        };
+        Returns: MessageRow;
+      };
       control_transition: {
         Args: { p_session_id: string; p_status: ControlStatus; p_reason?: string };
         Returns: ControlSessionRow;

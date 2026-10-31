@@ -37,10 +37,11 @@ export default async function RoomPage({ params }: PageProps<"/r/[slug]">) {
       </div>
       <RoomExperience
         slug={room.slug}
+        roomId={room.id}
         roomName={room.name}
-        myName={me.displayName}
-        myHue={me.avatarHue}
-        partnerName={partner?.displayName ?? null}
+        me={{ id: me.userId, name: me.displayName, hue: me.avatarHue }}
+        partner={partner ? { id: partner.userId, name: partner.displayName, hue: partner.avatarHue } : null}
+        gifsEnabled={Boolean(process.env.GIPHY_API_KEY)}
         aside={<RoomDetails room={room} me={me} partner={partner} />}
       />
     </div>

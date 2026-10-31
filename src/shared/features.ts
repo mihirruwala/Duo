@@ -7,7 +7,7 @@ export const FEATURES = {
   rooms: true, // M1
   video: true, // M2
   screenShare: true, // M2
-  chat: false, // M3
+  chat: true, // M3
   remoteControl: false, // M4
   studio: false, // M5
 } as const;

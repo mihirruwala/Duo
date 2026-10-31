@@ -4,6 +4,9 @@ import Link from "next/link";
 import { useState } from "react";
 import { DoorOpen, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ChatProvider, type Person } from "@/features/chat/chat-provider";
+import { ChatDock } from "@/features/chat/components/chat-dock";
+import { FEATURES } from "@/shared/features";
 import { callTokenResponseSchema, type CallTokenResponse } from "@/shared/call";
 import type { DevicePrefs } from "../device-prefs";
 import { MeetingRoom, type LeaveReason } from "./meeting-room";
@@ -16,10 +19,11 @@ type Phase =
 
 type Props = {
   slug: string;
+  roomId: string;
   roomName: string;
-  myName: string;
-  myHue: number;
-  partnerName: string | null;
+  me: Person;
+  partner: Person | null;
+  gifsEnabled: boolean;
   /** Server-rendered room details shown beside the pre-call studio. */
   aside?: React.ReactNode;
 };
@@ -39,7 +43,21 @@ async function fetchToken(slug: string): Promise<CallTokenResponse> {
   return parsed.data;
 }
 
-export function RoomExperience({ slug, roomName, myName, myHue, partnerName, aside }: Props) {
+export function RoomExperience({ slug, roomId, roomName, me, partner, gifsEnabled, aside }: Props) {
+  const content = <RoomPhases slug={slug} roomName={roomName} me={me} partner={partner} aside={aside} />;
+  if (!FEATURES.chat) return content;
+  return (
+    <ChatProvider roomId={roomId} slug={slug} me={me} partner={partner}>
+      {content}
+      <ChatDock roomId={roomId} gifsEnabled={gifsEnabled} />
+    </ChatProvider>
+  );
+}
+
+function RoomPhases({ slug, roomName, me, partner, aside }: Pick<Props, "slug" | "roomName" | "me" | "partner" | "aside">) {
+  const myName = me.name;
+  const myHue = me.hue;
+  const partnerName = partner?.name ?? null;
   const [phase, setPhase] = useState<Phase>({ kind: "precall" });
   const [joining, setJoining] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
