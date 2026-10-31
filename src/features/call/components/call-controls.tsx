@@ -2,6 +2,7 @@
 
 import {
   Camera,
+  Ellipsis,
   MonitorUp,
   MonitorX,
   Mic,
@@ -44,12 +45,12 @@ function Control({ label, shortcut, tone, pressed, disabled, onClick, children }
           disabled={disabled}
           onClick={onClick}
           className={cn(
-            "grid size-12 place-items-center rounded-2xl transition-[background-color,transform] active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 [&_svg]:size-5",
+            "grid size-11 place-items-center rounded-2xl transition-[background-color,transform] active:scale-95 sm:size-12 disabled:cursor-not-allowed disabled:opacity-40 [&_svg]:size-5",
             {
               neutral: "bg-ink-3 text-foreground hover:bg-ink-4",
               off: "bg-danger/90 text-ink-0 hover:bg-danger",
               accent: "bg-coral text-ink-0 hover:bg-coral-strong",
-              leave: "w-16 bg-danger text-ink-0 hover:brightness-110",
+              leave: "w-14 bg-danger sm:w-16 text-ink-0 hover:brightness-110",
             }[tone],
           )}
         >
@@ -102,7 +103,10 @@ export function CallControls({
   onLeave: () => void;
 }) {
   return (
-    <nav aria-label="Call controls" className="glass flex items-center gap-2 rounded-3xl p-2 shadow-2xl">
+    <nav
+      aria-label="Call controls"
+      className="glass flex max-w-full items-center gap-1.5 rounded-3xl p-1.5 shadow-2xl sm:gap-2 sm:p-2"
+    >
       <span className="flex items-center">
         <Control
           label={micOn ? "Mute" : "Unmute"}
@@ -112,7 +116,9 @@ export function CallControls({
         >
           {micOn ? <Mic /> : <MicOff />}
         </Control>
-        <DeviceMenu kind="audio" />
+        <span className="max-sm:hidden">
+          <DeviceMenu kind="audio" />
+        </span>
       </span>
       <span className="flex items-center">
         <Control
@@ -123,7 +129,9 @@ export function CallControls({
         >
           {camOn ? <Video /> : <VideoOff />}
         </Control>
-        <DeviceMenu kind="video" />
+        <span className="max-sm:hidden">
+          <DeviceMenu kind="video" />
+        </span>
       </span>
       {canShare &&
         (sharing || shareBlockedBy || !onShareControllable ? (
@@ -140,7 +148,7 @@ export function CallControls({
           <DropdownMenu>
             <DropdownMenuTrigger
               aria-label="Share screen"
-              className="grid size-12 place-items-center rounded-2xl bg-ink-3 text-foreground transition-colors hover:bg-ink-4 [&_svg]:size-5"
+              className="grid size-11 place-items-center rounded-2xl bg-ink-3 text-foreground transition-colors hover:bg-ink-4 sm:size-12 [&_svg]:size-5"
             >
               <MonitorUp />
             </DropdownMenuTrigger>
@@ -164,38 +172,78 @@ export function CallControls({
             </DropdownMenuContent>
           </DropdownMenu>
         ))}
-      {onOpenStudio && (
-        <Control label="Effects" tone={effectsOn ? "accent" : "neutral"} pressed={effectsOn} onClick={onOpenStudio}>
-          <Sparkles />
-        </Control>
-      )}
-      {onReact && (
-        <Popover>
-          <PopoverTrigger
-            aria-label="Send a reaction"
-            className="grid size-12 place-items-center rounded-2xl bg-ink-3 text-foreground transition-colors hover:bg-ink-4 [&_svg]:size-5"
-          >
-            <SmilePlus />
-          </PopoverTrigger>
-          <PopoverContent side="top" className="flex w-auto gap-1 rounded-2xl p-1.5">
-            {CALL_REACTIONS.map((e) => (
-              <button
-                key={e}
-                type="button"
-                onClick={() => onReact(e)}
-                aria-label={`React ${e}`}
-                className="grid size-11 place-items-center rounded-xl text-2xl transition-transform hover:scale-125 hover:bg-ink-3"
-              >
-                {e}
-              </button>
-            ))}
-          </PopoverContent>
-        </Popover>
-      )}
-      {onPhotoBooth && (
-        <Control label="Photo booth" tone="neutral" onClick={onPhotoBooth}>
-          <Camera />
-        </Control>
+      <span className="flex items-center gap-2 max-sm:hidden">
+        {onOpenStudio && (
+          <Control label="Effects" tone={effectsOn ? "accent" : "neutral"} pressed={effectsOn} onClick={onOpenStudio}>
+            <Sparkles />
+          </Control>
+        )}
+        {onReact && (
+          <Popover>
+            <PopoverTrigger
+              aria-label="Send a reaction"
+              className="grid size-11 place-items-center rounded-2xl bg-ink-3 text-foreground transition-colors hover:bg-ink-4 sm:size-12 [&_svg]:size-5"
+            >
+              <SmilePlus />
+            </PopoverTrigger>
+            <PopoverContent side="top" className="flex w-auto gap-1 rounded-2xl p-1.5">
+              {CALL_REACTIONS.map((e) => (
+                <button
+                  key={e}
+                  type="button"
+                  onClick={() => onReact(e)}
+                  aria-label={`React ${e}`}
+                  className="grid size-11 place-items-center rounded-xl text-2xl transition-transform hover:scale-125 hover:bg-ink-3"
+                >
+                  {e}
+                </button>
+              ))}
+            </PopoverContent>
+          </Popover>
+        )}
+        {onPhotoBooth && (
+          <Control label="Photo booth" tone="neutral" onClick={onPhotoBooth}>
+            <Camera />
+          </Control>
+        )}
+      </span>
+      {(onOpenStudio || onReact || onPhotoBooth) && (
+        <span className="sm:hidden">
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              aria-label="More"
+              className="grid size-11 place-items-center rounded-2xl bg-ink-3 text-foreground transition-colors hover:bg-ink-4 [&_svg]:size-5"
+            >
+              <Ellipsis />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent side="top" align="end" className="w-64">
+              {onReact && (
+                <div className="flex justify-between px-1 py-1" role="group" aria-label="Reactions">
+                  {CALL_REACTIONS.map((e) => (
+                    <DropdownMenuItem
+                      key={e}
+                      onSelect={() => onReact(e)}
+                      aria-label={`React ${e}`}
+                      className="justify-center p-1.5 text-2xl"
+                    >
+                      {e}
+                    </DropdownMenuItem>
+                  ))}
+                </div>
+              )}
+              {onOpenStudio && (
+                <DropdownMenuItem onSelect={onOpenStudio}>
+                  <Sparkles /> Effects{effectsOn ? " (on)" : ""}
+                </DropdownMenuItem>
+              )}
+              {onPhotoBooth && (
+                <DropdownMenuItem onSelect={onPhotoBooth}>
+                  <Camera /> Photo booth
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </span>
       )}
       <span className="mx-1 h-8 w-px bg-white/10" aria-hidden />
       <Control label="Leave call" tone="leave" onClick={onLeave}>

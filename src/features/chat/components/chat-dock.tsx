@@ -119,7 +119,7 @@ export function ChatDock({ roomId, gifsEnabled }: { roomId: string; gifsEnabled:
         onClick={() => setOpenPersist(true)}
         data-testid="chat-launcher"
         aria-label={chat.unread ? `Open chat, ${chat.unread} unread` : "Open chat"}
-        className="fixed right-4 bottom-4 z-50 flex items-center gap-2 rounded-full bg-cream py-3 pr-5 pl-4 font-bold text-ink-0 shadow-2xl transition-transform hover:scale-105 sm:bottom-6"
+        className="fixed right-4 bottom-24 z-50 flex items-center gap-2 rounded-full bg-cream py-3 pr-5 pl-4 font-bold text-ink-0 shadow-2xl transition-transform hover:scale-105 sm:bottom-6"
       >
         <MessageCircle className="size-5" /> Chat
         {chat.unread > 0 && (
@@ -181,6 +181,7 @@ export function ChatDock({ roomId, gifsEnabled }: { roomId: string; gifsEnabled:
                   "absolute -right-0.5 -bottom-0.5 size-3 rounded-full ring-2 ring-ink-2",
                   chat.partnerOnline ? "bg-mint" : "bg-ink-4",
                 )}
+                role="img"
                 aria-label={chat.partnerOnline ? "Online" : "Offline"}
                 data-testid="presence"
                 data-online={chat.partnerOnline ? "" : undefined}

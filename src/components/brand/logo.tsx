@@ -6,7 +6,11 @@ import { cn } from "@/lib/utils";
  */
 export function LogoMark({ className, title = "DUO" }: { className?: string; title?: string }) {
   return (
-    <svg viewBox="0 0 48 32" className={cn("h-8 w-12", className)} role="img" aria-label={title}>
+    <svg
+      viewBox="0 0 48 32"
+      className={cn("h-8 w-12", className)}
+      {...(title ? { role: "img", "aria-label": title } : { "aria-hidden": true })}
+    >
       <defs>
         <clipPath id="duo-left">
           <rect x="2" y="2" width="28" height="28" rx="14" />
@@ -27,9 +31,7 @@ export function Wordmark({ className, size = "md" }: { className?: string; size?
   return (
     <span className={cn("inline-flex items-center gap-2 select-none", className)}>
       <LogoMark className={mark} title="" />
-      <span className={cn("font-display font-extrabold tracking-tight lowercase", text)} aria-label="DUO">
-        duo
-      </span>
+      <span className={cn("font-display font-extrabold tracking-tight lowercase", text)}>duo</span>
     </span>
   );
 }

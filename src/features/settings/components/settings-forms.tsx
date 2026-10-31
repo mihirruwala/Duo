@@ -88,6 +88,7 @@ export function ProfileForm({ userId, initialName, initialHue }: { userId: strin
             value={[hue]}
             onValueChange={([v]) => setHue(v ?? hue)}
             aria-labelledby="hue-label"
+            thumbLabel="Colour"
             className="[&_[data-slot=slider-track]]:bg-[linear-gradient(90deg,oklch(0.8_0.12_0),oklch(0.8_0.12_60),oklch(0.8_0.12_120),oklch(0.8_0.12_180),oklch(0.8_0.12_240),oklch(0.8_0.12_300),oklch(0.8_0.12_359))]"
           />
         </div>

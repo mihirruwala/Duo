@@ -129,7 +129,7 @@ test("chat: realtime, replies, reactions, edits, receipts, media, Moments, persi
 
   // GIF search + send (only when a GIPHY key is configured).
   if (hasGiphy) {
-    await host.getByRole("button", { name: "GIFs" }).click();
+    await host.getByRole("button", { name: "GIF", exact: true }).click();
     await host.getByTestId("gif-search").fill("cat");
     await host.getByTestId("gif-results").getByRole("button").first().click();
     const gif = guest

@@ -19,12 +19,10 @@ export function UserMenu({ name, hue }: { name: string; hue: number }) {
   const router = useRouter();
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger
-        className="flex items-center gap-2 rounded-full p-1 pr-3 transition-colors hover:bg-ink-3"
-        aria-label={`Account menu for ${name}`}
-      >
+      <DropdownMenuTrigger className="flex items-center gap-2 rounded-full p-1 pr-3 transition-colors hover:bg-ink-3">
         <DuoAvatar name={name} hue={hue} size="sm" />
         <span className="max-w-32 truncate text-sm font-semibold">{name}</span>
+        <span className="sr-only">, account menu</span>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
         <DropdownMenuLabel className="truncate">{name}</DropdownMenuLabel>

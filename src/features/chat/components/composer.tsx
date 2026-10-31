@@ -100,7 +100,7 @@ export function Composer({
 
         {gifsEnabled && (
           <Popover open={gifOpen} onOpenChange={setGifOpen}>
-            <PopoverTrigger aria-label="GIFs" className={cn(iconClass, "text-[0.7rem] font-extrabold")}>
+            <PopoverTrigger aria-label="GIF" className={cn(iconClass, "text-[0.7rem] font-extrabold")}>
               GIF
             </PopoverTrigger>
             <PopoverContent side="top" align="start" className="w-auto rounded-2xl p-3">
