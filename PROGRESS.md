@@ -4,14 +4,14 @@ _Last updated: 2026-10-31_
 
 ## Milestone status
 
-| Milestone | Status |
-|---|---|
-| M1 Foundation | **✅ Complete. Gate verified against hosted Supabase** |
-| M2 Core video | Not started |
-| M3 Chat | Not started |
-| M4 Remote control | Not started |
-| M5 DUO Studio | Not started |
-| M6 Hardening & release | Not started |
+| Milestone              | Status                                                 |
+| ---------------------- | ------------------------------------------------------ |
+| M1 Foundation          | **✅ Complete. Gate verified against hosted Supabase** |
+| M2 Core video          | Not started                                            |
+| M3 Chat                | Not started                                            |
+| M4 Remote control      | Not started                                            |
+| M5 DUO Studio          | Not started                                            |
+| M6 Hardening & release | Not started                                            |
 
 ## M1: completed
 
@@ -30,23 +30,23 @@ _Last updated: 2026-10-31_
 
 ## Verified
 
-| What | How | Result |
-|---|---|---|
-| Schema + RLS | `npm test` → 45 RLS tests run the real migration in PGlite with Supabase role/grant emulation | ✅ 45/45 |
-| RLS tests can fail | Temporarily changed `messages_select` to `using (true)` | ✅ the outsider test failed as expected; reverted |
-| Invite/slug parsing, safe redirects, error mapping, CSP builder | Vitest unit tests | ✅ 14/14 |
-| Typecheck, lint, formatting | `npm run check`, `prettier --check` | ✅ clean |
-| Production build | `npm run build` | ✅ all routes dynamic (needed for nonce) |
-| CSP actually enforced | Playwright in Chrome: landing hydrates under the CSP with zero console errors; header nonce matches all 16 script tags | ✅ |
-| Anonymous redirects | Playwright: `/home`, `/r/*` → `/sign-in?next=…` | ✅ |
-| Responsive landing | Screenshots at 1440 px and 390 px, no horizontal overflow | ✅ |
+| What                                                            | How                                                                                                                    | Result                                            |
+| --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| Schema + RLS                                                    | `npm test` → 45 RLS tests run the real migration in PGlite with Supabase role/grant emulation                          | ✅ 45/45                                          |
+| RLS tests can fail                                              | Temporarily changed `messages_select` to `using (true)`                                                                | ✅ the outsider test failed as expected; reverted |
+| Invite/slug parsing, safe redirects, error mapping, CSP builder | Vitest unit tests                                                                                                      | ✅ 14/14                                          |
+| Typecheck, lint, formatting                                     | `npm run check`, `prettier --check`                                                                                    | ✅ clean                                          |
+| Production build                                                | `npm run build`                                                                                                        | ✅ all routes dynamic (needed for nonce)          |
+| CSP actually enforced                                           | Playwright in Chrome: landing hydrates under the CSP with zero console errors; header nonce matches all 16 script tags | ✅                                                |
+| Anonymous redirects                                             | Playwright: `/home`, `/r/*` → `/sign-in?next=…`                                                                        | ✅                                                |
+| Responsive landing                                              | Screenshots at 1440 px and 390 px, no horizontal overflow                                                              | ✅                                                |
 
 ## M1 gate (hosted Supabase)
 
-| What | How | Result |
-|---|---|---|
-| Migration applied | Anonymous REST probe of profiles/rooms/messages → `42501 permission denied` (tables exist, anon locked out) | ✅ |
-| Sign up → create room → second session joins via invite → third user rejected (dead invite + "Room not found" on direct URL + guessed slug) | `tests/e2e/rooms.spec.ts`, two isolated Chrome contexts, production build | ✅ 4/4 e2e passing |
+| What                                                                                                                                        | How                                                                                                         | Result             |
+| ------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ------------------ |
+| Migration applied                                                                                                                           | Anonymous REST probe of profiles/rooms/messages → `42501 permission denied` (tables exist, anon locked out) | ✅                 |
+| Sign up → create room → second session joins via invite → third user rejected (dead invite + "Room not found" on direct URL + guessed slug) | `tests/e2e/rooms.spec.ts`, two isolated Chrome contexts, production build                                   | ✅ 4/4 e2e passing |
 
 ## Known issues / decisions
 
