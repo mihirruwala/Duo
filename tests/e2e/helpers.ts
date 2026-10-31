@@ -3,6 +3,7 @@ import { expect } from "./fixtures";
 
 export const PASSWORD = "duo-e2e-password-123";
 const run = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+let userSeq = 0;
 
 /**
  * Test double for getDisplayMedia: real screen capture needs an OS permission prompt that
@@ -39,7 +40,7 @@ export async function newUserPage(browser: Browser, name: string, opts: { fakeDi
   const page = await context.newPage();
   await page.goto("/sign-up");
   await page.getByLabel("Your name").fill(name);
-  await page.getByLabel("Email").fill(`duo-e2e-${name.toLowerCase()}-${run}@example.com`);
+  await page.getByLabel("Email").fill(`duo-e2e-${name.toLowerCase()}-${run}-${++userSeq}@example.com`);
   await page.getByLabel("Password").fill(PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
   await expect(page).toHaveURL(/\/home$/);
@@ -75,4 +76,37 @@ export async function expectVideoPlaying(page: Page, selector: string) {
       { timeout: 20_000 },
     )
     .toBe(true);
+}
+
+/**
+ * Measures the energy of the *decoded* remote audio this page is playing (Web Audio analyser
+ * on the <audio> elements LiveKit renders). Non-zero means sound actually arrived and decoded.
+ */
+export async function remoteAudioPeak(page: Page, ms = 3000): Promise<number> {
+  return page.evaluate(async (duration) => {
+    const streams = Array.from(document.querySelectorAll("audio"))
+      .map((a) => a.srcObject)
+      .filter((s): s is MediaStream => s instanceof MediaStream && s.getAudioTracks().length > 0);
+    if (streams.length === 0) return 0;
+    const ctx = new AudioContext();
+    await ctx.resume();
+    const analysers = streams.map((s) => {
+      const an = ctx.createAnalyser();
+      an.fftSize = 1024;
+      ctx.createMediaStreamSource(s).connect(an);
+      return an;
+    });
+    const buf = new Float32Array(1024);
+    let peak = 0;
+    const end = performance.now() + duration;
+    while (performance.now() < end) {
+      for (const an of analysers) {
+        an.getFloatTimeDomainData(buf);
+        for (const v of buf) peak = Math.max(peak, Math.abs(v));
+      }
+      await new Promise((r) => setTimeout(r, 50));
+    }
+    await ctx.close();
+    return peak;
+  }, ms);
 }
