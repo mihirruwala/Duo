@@ -71,12 +71,20 @@ to avoid recursive policies.
 | `control_sessions`  | Audit log: `room_id`, `owner_id`, `controller_id`, `status requested                                                                                                                           | approved                          | denied | revoked | expired                                                                                                                                                                                                 | ended`, timestamps, `expires_at`, `end_reason`. |
 | `rate_limits`       | Fixed-window counters keyed by `bucket:subject`. Only reachable through `SECURITY DEFINER` function called with the service role. No client access.                                            |
 
-Storage: private bucket `attachments`, object path `<room_id>/<uuid>/<sanitized-name>`;
-storage RLS checks `is_room_member(first path segment)`. Signed URLs with 5-minute expiry. _(M3)_
+Storage (M3, built): private bucket `attachments`, object path `<room_id>/<uuid>/<sanitized-name>`; storage RLS checks
+`is_room_member(first path segment)` and the exact path shape. Uploads use a signed upload URL minted with the user's
+session (XHR for progress). Reads use signed URLs with 5-minute expiry, re-signed automatically.
 
-Realtime: `postgres_changes` on `messages`, `message_reactions`, `message_receipts` (RLS-filtered);
-typing indicators and presence via **private** broadcast channels `room:<id>` authorized by
-policies on `realtime.messages`. _(M3)_
+Realtime (M3, built): **broadcast from database**. `AFTER` triggers call `realtime.broadcast_changes()` into the private
+topic `room:<room_id>` for messages, reactions, receipts, attachments, Moments and control sessions. Typing and presence
+use the same channel. Authorization is RLS on `realtime.messages` (members of that room only; verified that outsiders get
+`Unauthorized`). We deliberately avoid `postgres_changes`, which cannot apply RLS to DELETE events.
+
+Client model (`src/features/chat`): a pure reducer (`chat-reducer.ts`, unit-tested) holds messages keyed by id.
+Display order is server `seq` (a total order); optimistic messages carry their final client-generated id and sit at the
+end until confirmed. Sends are serialized per tab so `seq` order = typing order. Loads merge (never replace) so a slow
+history fetch can't drop newer events. On channel re-subscribe, `online` or tab-visible, the client resyncs:
+everything newer than its newest `seq`, plus a refresh of the latest page and its reactions/attachments.
 
 ## 4. Remote-control protocol _(M4)_
 

@@ -47,3 +47,19 @@ Tick each box and note the Chrome version and OS.
 
 - [ ] A third account opening the room URL sees "Room not found".
 - [ ] Signing out in one tab, then clicking Join call in another → "Your session expired" message.
+
+## M3: chat
+
+- [ ] Messages appear on the other machine in well under a second, on different networks (e.g. one on a phone hotspot).
+- [ ] Turn Wi-Fi off on one side, send messages from the other, turn Wi-Fi back on → the missed messages appear without reload.
+- [ ] Hover a message: Reply / React / Copy / (Edit / Delete on yours) / bookmark on photos, GIFs and stickers. Tab to a message with
+      the keyboard: the same actions appear.
+- [ ] Paste a screenshot (⌘V) into the composer → it uploads with progress and appears on both sides.
+- [ ] Drag a PDF onto the chat → "Drop to send" overlay → uploads; the other side downloads it with the right name.
+- [ ] Try a 30 MB file and an .svg → clear refusal messages.
+- [ ] Open a photo → full-screen viewer; ←/→ moves between photos/GIFs; +/−/0 and the mouse wheel zoom; Esc closes.
+- [ ] Search GIFs (with a GIPHY key) → send → the other side sees it; "Powered by GIPHY" shown in the picker.
+- [ ] Resize the chat from its top-left corner; minimize → unread badge counts new messages; reload → size and open state remembered.
+- [ ] During a call, the chat floats above the video and doesn't block the call controls.
+- [ ] Phone-width window: chat opens full screen and is usable.
+- [ ] Sign in on a second device as the same user: full history, reactions and Moments are there.

@@ -80,11 +80,62 @@ _Last updated: 2026-10-31_
 Test doubles, stated plainly: Chrome's fake camera/mic, and a canvas stream in place of `getDisplayMedia` (the real OS
 picker can't be clicked in automation). Real devices and real screen capture are in `docs/MANUAL_TESTS.md`. **Not yet run by a human.**
 
+## M3: completed
+
+- Migrations `…0200_chat_realtime_storage`, `…0300_chat_receipts_rpc` (applied to hosted Supabase):
+  - **Realtime via broadcast-from-database** into private topics `room:<id>`. Triggers on messages, reactions, receipts,
+    attachments, Moments and control sessions. Authorization = RLS on `realtime.messages` (members only). Chosen over
+    postgres-changes because Realtime can't apply RLS to DELETE events there.
+  - Private `attachments` bucket (25 MB, MIME allow-list, no SVG/HTML), storage RLS: members only, own room folder,
+    strict path shape, uploader-only delete.
+  - `send_attachment_message` (atomic message + attachment, verifies the object exists and is yours),
+    `mark_receipts` (monotonic watermarks), tombstoning a message removes its attachment rows + Moments.
+- `POST /api/rooms/[slug]/uploads` (signed upload URL with user session, sanitized name, rate-limited);
+  `GET /api/gifs` (GIPHY proxy, key server-only, auth + rate limit, URLs validated against `media*.giphy.com`).
+- Chat UI: floating dock (resizable from the top-left handle or arrow keys, collapsible, remembers size/state, unread
+  badge, full-screen on phones), works in pre-call and in-call; tabs Chat / Media / Moments.
+  Messages: optimistic send with retry, reply with quote + jump (loads older history if needed), reactions
+  (quick + more, counts, who reacted), copy, edit (edited marker), delete (tombstone), typing indicator, presence,
+  Sent/Delivered/Read, day separators and grouping, safe link rendering, infinite scroll upwards, reconnect resync.
+  Media: image upload with progress + inline display, full-screen viewer (Esc, ←/→, zoom + − 0, wheel, double-click),
+  files with signed download links, 12 original stickers, GIF search, paste and drag-and-drop upload.
+  Media gallery (all photos/GIFs/files in the room) and shared Moments.
+
+## M3 gate
+
+| What                         | How                                                                                                                                                      | Result                    |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
+| Messages arrive instantly    | Two sessions; measured send → visible on the other side                                                                                                  | ✅ 313–454 ms across runs |
+| Replies link to the original | Quote shows on both sides; clicking jumps + highlights                                                                                                   | ✅                        |
+| Reactions sync               | ❤️ from Gabe → Hana sees 1; Hana adds hers → Gabe sees 2                                                                                                 | ✅                        |
+| Edit / delete                | "edited" marker and tombstone on the other side                                                                                                          | ✅                        |
+| Typing + receipts            | "Hana is typing…" on Gabe's side; Hana's message shows "Read"                                                                                            | ✅                        |
+| Images                       | Upload → decoded inline on the other side → viewer opens, zooms, closes with Esc                                                                         | ✅                        |
+| Files                        | PDF upload, `../../plans/trip.pdf` sanitized to `trip.pdf`, signed download works                                                                        | ✅                        |
+| Stickers                     | Sent and rendered on the other side                                                                                                                      | ✅                        |
+| GIFs                         | Search proxy + picker built; **not run end-to-end: no GIPHY key yet**                                                                                    | ⏸                         |
+| Moments + gallery            | Gabe saves photo → in Hana's Moments; gallery lists photo + file                                                                                         | ✅                        |
+| Unread badge                 | Collapsed dock shows 1 after a new message                                                                                                               | ✅                        |
+| Persistence                  | Reload: history, reply, reactions, edit marker, tombstone, sticker, image all restored                                                                   | ✅                        |
+| Ordering                     | 6 rapid messages right after opening chat: same order on both sides and after reload                                                                     | ✅                        |
+| Outsider can't read          | Real Supabase API as an outsider: messages/attachments/Moments/reactions/receipts = [], can't sign/list/download files, can't post, channel join refused | ✅                        |
+| Public-channel leak probe    | Outsider on a _public_ channel with the same topic receives 0 broadcasts; spoofed public events don't reach members                                      | ✅                        |
+| DB policies                  | 21 PGlite tests (realtime authorization, storage, broadcasts, RPCs); one policy mutation-checked                                                         | ✅                        |
+| Suites                       | Unit+DB 88/88; e2e 9/9 on the production build and 9/9 on `next dev`                                                                                     | ✅                        |
+
 ## Bugs found in user testing
 
 - **2026-10-31: "Disconnected" on join under `npm run dev`.** The `Room` was created once and reused across React StrictMode's
   dev double-mount, so the second `connect()` ran on a Room disconnected mid-connect. Tests only ran the production build, so they
   missed it. Fix: a fresh `Room` per effect run, exposed to the UI only after it connects. Added `npm run test:e2e:dev` so dev mode stays covered.
+
+### Bugs found while building M3 (fixed, with regression tests)
+
+- Initial history load could **drop messages** sent while it was in flight (load replaced state). Now merges. Unit + e2e tests.
+- Quick successive messages could **swap order** (parallel inserts race). Sends are now serialized per tab. E2E test.
+- Chat didn't stay pinned to the bottom when images finished loading. ResizeObserver keeps it pinned.
+- Dock briefly flashed closed on reload before restoring its open state. Now renders nothing until restored.
+- E2E hygiene: contexts from earlier tests stayed open (some in live calls). Now auto-closed after each test.
 
 ## Known issues / decisions
 
@@ -93,11 +144,19 @@ picker can't be clicked in automation). Real devices and real screen capture are
   the tool sandbox blocked executing a downloaded binary.
 - Transport is DTLS-SRTP encrypted, but LiveKit's SFU can see media. This is **not end-to-end encryption**. E2EE is an M6 stretch goal.
 - `cacheComponents` disabled on purpose (nonce CSP). `style-src 'unsafe-inline'` kept for Radix/LiveKit inline styles.
-- Deleting a room cascades all rows, but storage objects get cleaned up only once Storage lands in M3.
+- Deleting a room cascades all rows, but its **storage objects are not yet removed** (they stay private, since the
+  folder's room no longer exists so no one passes RLS). Cleanup job is planned for M6.
+- Upload type checks use the declared MIME type (bucket + route + client), not content sniffing. Files are served from
+  the Supabase storage domain, never DUO's origin, and SVG/HTML are refused, so this can't become XSS on DUO.
+- Several files sent at once are placed in the order their uploads finish. Text/GIF/sticker order is strict.
+- Media gallery shows the latest 200 items.
+- Recommended: Supabase Dashboard → Realtime → Settings → disable "Allow public access" (defence in depth; the probe
+  above shows public channels already receive nothing).
 - `supabase/seed.sql` not written: seeding needs local Supabase (Docker). The e2e suite creates its own users.
 - Database types (`src/shared/database.ts`) are hand-written until a project is linked (`npm run db:types`).
 
 ## Next steps
 
-1. Run the M2 section of `docs/MANUAL_TESTS.md` on two real machines.
-2. M3: chat (Realtime, replies, reactions, edits, receipts, images, GIFs, stickers, files, gallery, Moments). Needs a GIPHY API key.
+1. Add `GIPHY_API_KEY`, then run the GIF part of the chat e2e (it auto-enables when the key is present).
+2. Run the M2 + M3 sections of `docs/MANUAL_TESTS.md` on two real machines.
+3. M4: remote control (Chrome extension, approval flow, input injection, revoke, emergency stop, audit log).

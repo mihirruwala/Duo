@@ -31,6 +31,52 @@ const SUPABASE_STUB = `
   grant usage on schema auth to anon, authenticated, service_role;
   grant execute on function auth.uid() to anon, authenticated, service_role;
 
+  -- Realtime (subset): authorization table + topic() + a recording stand-in for broadcast_changes.
+  create schema realtime;
+  create table realtime.messages (
+    id bigserial primary key,
+    topic text not null,
+    extension text not null,
+    payload jsonb,
+    event text,
+    private boolean default true
+  );
+  alter table realtime.messages enable row level security;
+  create function realtime.topic() returns text language sql stable as $$
+    select nullif(current_setting('realtime.topic', true), '')
+  $$;
+  create table realtime.test_broadcasts (id bigserial primary key, topic text, event text, tbl text, new_row jsonb, old_row jsonb);
+  create function realtime.broadcast_changes(
+    topic_name text, event_name text, operation text, table_name text, table_schema text, new record, old record
+  ) returns void language plpgsql as $$
+  begin
+    insert into realtime.test_broadcasts (topic, event, tbl, new_row, old_row)
+    values (topic_name, event_name, table_name, to_jsonb(new), to_jsonb(old));
+  end;
+  $$;
+  grant usage on schema realtime to anon, authenticated, service_role;
+  grant select, insert on realtime.messages to authenticated;
+  grant usage on sequence realtime.messages_id_seq to authenticated;
+  grant execute on function realtime.topic() to anon, authenticated;
+
+  -- Storage (subset).
+  create schema storage;
+  create table storage.buckets (
+    id text primary key, name text, public boolean default false,
+    file_size_limit bigint, allowed_mime_types text[]
+  );
+  create table storage.objects (
+    id uuid primary key default gen_random_uuid(),
+    bucket_id text references storage.buckets (id),
+    name text not null,
+    owner_id text default (auth.uid())::text,
+    created_at timestamptz default now(),
+    unique (bucket_id, name)
+  );
+  alter table storage.objects enable row level security;
+  grant usage on schema storage to anon, authenticated, service_role;
+  grant select, insert, delete on storage.objects to authenticated;
+
   grant usage on schema public to anon, authenticated, service_role;
   alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
   alter default privileges in schema public grant all on sequences to anon, authenticated, service_role;
@@ -40,6 +86,15 @@ const SUPABASE_STUB = `
 const MIGRATIONS_DIR = join(__dirname, "..", "..", "supabase", "migrations");
 
 export type Db = PGlite;
+
+/** Rows our triggers handed to realtime.broadcast_changes (test stand-in), newest last. */
+export async function broadcasts(db: Db) {
+  return (
+    await db.query<{ topic: string; event: string; tbl: string }>(
+      "select topic, event, tbl from realtime.test_broadcasts order by id",
+    )
+  ).rows;
+}
 
 export async function createTestDb(): Promise<Db> {
   const db = new PGlite();
@@ -76,12 +131,13 @@ export async function as<T>(
   db: Db,
   userId: string | null,
   fn: (q: <R = Record<string, unknown>>(sql: string, params?: unknown[]) => Promise<R[]>) => Promise<T>,
-  opts: { commit?: boolean; role?: Role } = {},
+  opts: { commit?: boolean; role?: Role; topic?: string } = {},
 ): Promise<T> {
   const role: Role = opts.role ?? (userId ? "authenticated" : "anon");
   return db.transaction(async (tx) => {
     await tx.query(`select set_config('role', $1, true)`, [role]);
     await tx.query(`select set_config('request.jwt.claims', $1, true)`, [userId ? JSON.stringify({ sub: userId, role }) : ""]);
+    await tx.query(`select set_config('realtime.topic', $1, true)`, [opts.topic ?? ""]);
     const q = async <R = Record<string, unknown>>(sql: string, params?: unknown[]) => (await tx.query<R>(sql, params)).rows;
     const result = await fn(q);
     if (!opts.commit) await tx.rollback();

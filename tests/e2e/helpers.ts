@@ -1,5 +1,5 @@
 import type { Browser, Page } from "@playwright/test";
-import { expect } from "./fixtures";
+import { expect, openContexts } from "./fixtures";
 
 export const PASSWORD = "duo-e2e-password-123";
 const run = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
@@ -34,13 +34,24 @@ export const FAKE_DISPLAY_MEDIA = () => {
   };
 };
 
+const emails = new WeakMap<Page, string>();
+/** Email of a user created with newUserPage (same password for all: PASSWORD). */
+export function emailOf(page: Page): string {
+  const e = emails.get(page);
+  if (!e) throw new Error("page was not created by newUserPage");
+  return e;
+}
+
 export async function newUserPage(browser: Browser, name: string, opts: { fakeDisplay?: boolean } = {}): Promise<Page> {
   const context = await browser.newContext({ permissions: ["camera", "microphone"] });
+  openContexts.add(context);
   if (opts.fakeDisplay) await context.addInitScript(FAKE_DISPLAY_MEDIA);
   const page = await context.newPage();
   await page.goto("/sign-up");
   await page.getByLabel("Your name").fill(name);
-  await page.getByLabel("Email").fill(`duo-e2e-${name.toLowerCase()}-${run}-${++userSeq}@example.com`);
+  const email = `duo-e2e-${name.toLowerCase()}-${run}-${++userSeq}@example.com`;
+  emails.set(page, email);
+  await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
   await expect(page).toHaveURL(/\/home$/);

@@ -48,3 +48,33 @@ describe("CSP", () => {
     expect(csp).toContain("object-src 'none'");
   });
 });
+
+import { sanitizeFileName, uploadRequestSchema } from "@/shared/chat";
+
+describe("sanitizeFileName", () => {
+  it.each([
+    ["../../etc/passwd", "passwd"],
+    ["C:\\Users\\me\\evil.pdf", "evil.pdf"],
+    ["  hello   world .pdf ", "hello world .pdf"],
+    ["\u202Egnp.exe", "gnp.exe"],
+    ["...hidden", "hidden"],
+    ["<script>.txt", "script.txt"],
+    ["", "file"],
+  ])("%j → %j", (input, expected) => expect(sanitizeFileName(input)).toBe(expected));
+  it("caps long names but keeps the extension", () => {
+    const out = sanitizeFileName(`${"a".repeat(300)}.pdf`);
+    expect(out.length).toBe(120);
+    expect(out.endsWith(".pdf")).toBe(true);
+  });
+});
+
+describe("uploadRequestSchema", () => {
+  it("rejects SVG, HTML and oversize files", () => {
+    expect(uploadRequestSchema.safeParse({ fileName: "x.svg", mimeType: "image/svg+xml", size: 10 }).success).toBe(false);
+    expect(uploadRequestSchema.safeParse({ fileName: "x.html", mimeType: "text/html", size: 10 }).success).toBe(false);
+    expect(uploadRequestSchema.safeParse({ fileName: "x.png", mimeType: "image/png", size: 26 * 1024 * 1024 }).success).toBe(
+      false,
+    );
+    expect(uploadRequestSchema.safeParse({ fileName: "x.png", mimeType: "image/png", size: 1024 }).success).toBe(true);
+  });
+});
