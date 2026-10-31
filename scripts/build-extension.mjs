@@ -60,7 +60,11 @@ const manifest = {
   //  - notifications: approval prompt when DUO isn't in front
   permissions: ["debugger", "tabCapture", "activeTab", "notifications"],
   background: { service_worker: "background.js", type: "module" },
-  action: { default_popup: "popup.html", default_title: "DUO Control", default_icon: { 16: "icons/16.png", 32: "icons/32.png", 48: "icons/48.png" } },
+  action: {
+    default_popup: "popup.html",
+    default_title: "DUO Control",
+    default_icon: { 16: "icons/16.png", 32: "icons/32.png", 48: "icons/48.png" },
+  },
   icons: { 16: "icons/16.png", 48: "icons/48.png", 128: "icons/128.png" },
   commands: {
     "emergency-stop": {
