@@ -34,7 +34,11 @@ export function AuthForm({ mode, next }: { mode: Mode; next?: string }) {
   const [checkEmail, setCheckEmail] = useState(false);
   const target = safeNextPath(next);
 
-  function onSubmit(form: FormData) {
+  // onSubmit (not <form action>): React resets uncontrolled fields after an action, which would
+  // wipe what the person typed whenever validation fails.
+  function onSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
     setFormError(null);
     const raw = Object.fromEntries(form.entries());
     const schema = mode === "sign-up" ? signUpSchema : signInSchema;
@@ -87,7 +91,7 @@ export function AuthForm({ mode, next }: { mode: Mode; next?: string }) {
   const otherHref = `${mode === "sign-in" ? "/sign-up" : "/sign-in"}${next ? `?next=${encodeURIComponent(target)}` : ""}`;
 
   return (
-    <form action={onSubmit} className="flex flex-col gap-5" noValidate>
+    <form onSubmit={onSubmit} className="flex flex-col gap-5" noValidate>
       {mode === "sign-up" && (
         <Field id="displayName" label="Your name" error={errors.displayName}>
           <Input id="displayName" name="displayName" autoComplete="nickname" maxLength={40} placeholder="Sam" />

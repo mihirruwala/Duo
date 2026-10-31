@@ -5,6 +5,8 @@ import { defineConfig, devices } from "@playwright/test";
 loadEnvConfig(process.cwd());
 
 const PORT = Number(process.env.E2E_PORT ?? 3100);
+/** E2E_BASE_URL=https://… runs the suite against a deployed site (no local server). */
+const REMOTE = process.env.E2E_BASE_URL;
 
 /**
  * E2E runs against a production build (so the real CSP applies).
@@ -18,7 +20,7 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   reporter: [["list"], ["html", { open: "never" }]],
   use: {
-    baseURL: `http://localhost:${PORT}`,
+    baseURL: REMOTE ?? `http://localhost:${PORT}`,
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },
@@ -39,11 +41,13 @@ export default defineConfig({
       },
     },
   ],
-  webServer: {
-    // E2E_DEV=1 runs against `next dev` (React StrictMode double-mounts), which is how people develop locally.
-    command: process.env.E2E_DEV ? `npx next dev -p ${PORT}` : `npm run build && npm run start -- -p ${PORT}`,
-    url: `http://localhost:${PORT}`,
-    reuseExistingServer: !process.env.CI,
-    timeout: 240_000,
-  },
+  webServer: REMOTE
+    ? undefined
+    : {
+        // E2E_DEV=1 runs against `next dev` (React StrictMode double-mounts), which is how people develop locally.
+        command: process.env.E2E_DEV ? `npx next dev -p ${PORT}` : `npm run build && npm run start -- -p ${PORT}`,
+        url: `http://localhost:${PORT}`,
+        reuseExistingServer: !process.env.CI,
+        timeout: 240_000,
+      },
 });

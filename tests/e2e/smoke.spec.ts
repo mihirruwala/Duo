@@ -34,3 +34,28 @@ test("join form routes a pasted invite link to /join with the code in the fragme
   await page.getByRole("button", { name: "Join" }).click();
   await expect(page).toHaveURL(/\/join/);
 });
+
+test("public sign-up form creates an account (confirmation on → 'check your inbox'; off → signed in)", async ({ page }) => {
+  test.skip(!process.env.SUPABASE_SECRET_KEY, "needs Supabase");
+  const email = `duo-e2e-signup-${Date.now()}@example.com`;
+  await page.goto("/sign-up");
+  await page.getByLabel("Your name").fill("Sam");
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password").fill("short");
+  await page.getByRole("button", { name: "Create account" }).click();
+  await expect(page.getByText("Use at least 10 characters.")).toBeVisible();
+  // Regression: a validation error must not wipe what was typed.
+  await expect(page.getByLabel("Email")).toHaveValue(email);
+  await expect(page.getByLabel("Your name")).toHaveValue("Sam");
+  await page.getByLabel("Password").fill("duo-e2e-password-123");
+  await page.getByRole("button", { name: "Create account" }).click();
+  await expect(page.getByText("Check your inbox").or(page.getByRole("heading", { name: /Hey Sam/ }))).toBeVisible({
+    timeout: 15_000,
+  });
+  // Clean up the account it created.
+  const { adminClient } = await import("./fixtures");
+  const admin = adminClient();
+  const { data } = await admin.auth.admin.listUsers({ perPage: 200 });
+  const u = data.users.find((x) => x.email === email);
+  if (u) await admin.auth.admin.deleteUser(u.id);
+});

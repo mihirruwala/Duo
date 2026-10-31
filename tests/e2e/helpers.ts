@@ -1,5 +1,5 @@
 import type { Browser, Page } from "@playwright/test";
-import { expect, openContexts } from "./fixtures";
+import { adminClient, createdUserIds, expect, openContexts } from "./fixtures";
 
 export const PASSWORD = "duo-e2e-password-123";
 const run = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
@@ -51,16 +51,26 @@ export async function newUserPage(browser: Browser, name: string, opts: { fakeDi
   return page;
 }
 
-/** Create an account in an existing page (e.g. one inside an extension-enabled context). */
+/**
+ * Create a confirmed account (admin API, so tests don't depend on the "Confirm email" setting),
+ * then sign in through the real sign-in form in `page`.
+ */
 export async function signUpOn(page: Page, name: string): Promise<void> {
-  await page.goto("/sign-up");
-  await page.getByLabel("Your name").fill(name);
   const email = `duo-e2e-${name.toLowerCase()}-${run}-${++userSeq}@example.com`;
+  const { data, error } = await adminClient().auth.admin.createUser({
+    email,
+    password: PASSWORD,
+    email_confirm: true,
+    user_metadata: { display_name: name },
+  });
+  if (error || !data.user) throw new Error(`createUser failed: ${error?.message}`);
+  createdUserIds.add(data.user.id);
   emails.set(page, email);
+  await page.goto("/sign-in");
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(PASSWORD);
-  await page.getByRole("button", { name: "Create account" }).click();
-  await expect(page).toHaveURL(/\/home$/);
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await expect(page).toHaveURL(/\/home$/, { timeout: 20_000 });
 }
 
 /** Host creates a room, guest redeems the invite. Returns the room URL and invite URL. */
