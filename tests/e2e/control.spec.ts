@@ -128,7 +128,11 @@ test("remote control: approve, click/type/scroll/drag/navigate, revoke, emergenc
 
   // Owner: Share → "a tab they can control" → instructions (extension detected) → pick the tab.
   await hostPage.getByRole("button", { name: "Share screen" }).click();
+  const pipPromise = owner.waitForEvent("page");
   await hostPage.getByRole("menuitem", { name: /Share a tab they can control/ }).click();
+  // The mini window opens with the same click, so Revoke stays visible once Hana switches tabs.
+  const pip = await pipPromise;
+  await expect(pip.getByTestId("call-pip")).toContainText("Gabe");
   await expect(hostPage.getByRole("heading", { name: "Pick the tab to share" })).toBeVisible();
   const bound = await hostPage.evaluate(
     ([id, prefix]) =>
@@ -229,9 +233,9 @@ test("remote control: approve, click/type/scroll/drag/navigate, revoke, emergenc
   await guest.waitForTimeout(800);
   expect((await target(tab)).clicks).toBe(1);
 
-  // Second session → emergency stop (the extension's global command handler).
+  // Second session → approved from the mini window → emergency stop (the extension's global command handler).
   await guest.getByTestId("request-control").click();
-  await hostPage.getByTestId("approve-control").click();
+  await pip.getByTestId("pip-approve").click();
   await expect(guest.getByTestId("controller-bar")).toContainText("You're controlling");
   await hostPage.evaluate(
     (id) =>
@@ -251,6 +255,16 @@ test("remote control: approve, click/type/scroll/drag/navigate, revoke, emergenc
   await expect(guest.getByTestId("request-control")).toBeVisible({ timeout: 10_000 });
   await expect(hostPage.getByTestId("control-active-banner")).toHaveCount(0);
 
+  // Fourth session → revoked from the mini window.
+  await tab.goto(`${TARGET}/target`);
+  await expect(hostPage.getByTestId("share-local")).toBeVisible();
+  await guest.getByTestId("request-control").click();
+  await hostPage.getByTestId("approve-control").click();
+  await expect(pip.getByTestId("call-pip")).toContainText("Gabe is controlling");
+  await pip.getByTestId("pip-revoke").click();
+  await expect(guest.getByTestId("request-control")).toBeVisible({ timeout: 5_000 });
+  await expect(pip.getByTestId("pip-revoke")).toHaveCount(0);
+
   // Audit log: every session recorded with who approved and how it ended.
   const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!, {
     auth: { persistSession: false },
@@ -269,7 +283,12 @@ test("remote control: approve, click/type/scroll/drag/navigate, revoke, emergenc
       },
       { timeout: 10_000 },
     )
-    .toEqual(["revoked:owner_revoked:decided", "revoked:emergency_stop:decided", "ended:blocked_url:decided"]);
+    .toEqual([
+      "revoked:owner_revoked:decided",
+      "revoked:emergency_stop:decided",
+      "ended:blocked_url:decided",
+      "revoked:owner_revoked:decided",
+    ]);
 });
 
 test("a DUO page can't be controlled, and requests are refused when nothing controllable is shared", async ({ browser }) => {

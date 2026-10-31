@@ -23,7 +23,7 @@ import {
   VideoPresets,
   type LocalVideoTrack,
 } from "livekit-client";
-import { Loader2, Lock, Volume2, WifiOff } from "lucide-react";
+import { Loader2, Lock, PictureInPicture2, Volume2, WifiOff } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -38,6 +38,7 @@ import { CONTROLLABLE_TRACK_NAME } from "@/shared/control";
 import { PerfBadge, StudioPanel } from "@/features/studio/components/studio-panel";
 import { useStudioTrack } from "@/features/studio/use-studio-track";
 import { isStudioActive } from "@/shared/studio";
+import { CallPip, pipSupported, useCallPip } from "../pip/call-pip";
 import { CallControls } from "./call-controls";
 import { ParticipantTile } from "./participant-tile";
 import { ScreenShareStage } from "./screen-share-stage";
@@ -190,6 +191,7 @@ function CallLayout({ roomName, partnerName, onLeave }: { roomName: string; part
   const [modKey] = useState<"Meta" | "Control">(() => (navigator.userAgent.includes("Mac") ? "Meta" : "Control"));
   const partnerLeft = usePartnerLeft();
   const control = useControl();
+  const pip = useCallPip();
 
   const tracks = useTracks(
     [
@@ -262,12 +264,25 @@ function CallLayout({ roomName, partnerName, onLeave }: { roomName: string; part
           <Lock className="size-4 shrink-0 text-mint" aria-hidden />
           <h1 className="truncate text-lg font-bold">{roomName}</h1>
         </span>
+        {pipSupported() && (
+          <Button
+            size="sm"
+            variant="ghost"
+            className="ml-auto"
+            onClick={() => void (pip.pipWindow ? pip.close() : pip.open())}
+            aria-pressed={!!pip.pipWindow}
+            data-testid="pop-out"
+          >
+            <PictureInPicture2 /> {pip.pipWindow ? "Close mini window" : "Pop out"}
+          </Button>
+        )}
         <span
           role="status"
           data-testid="connection-state"
           data-state={state}
           className={cn(
-            "ml-auto flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold",
+            "flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold",
+            !pipSupported() && "ml-auto",
             reconnecting ? "bg-sun/15 text-sun" : "bg-mint/10 text-mint",
           )}
         >
@@ -354,12 +369,21 @@ function CallLayout({ roomName, partnerName, onLeave }: { roomName: string; part
           onToggleMic={() => void toggleMic()}
           onToggleCam={() => void toggleCam()}
           onToggleShare={() => void toggleShare()}
-          onShareControllable={FEATURES.remoteControl ? control.startControllableShare : undefined}
+          onShareControllable={
+            FEATURES.remoteControl
+              ? () => {
+                  // You're about to switch tabs: keep your person and Revoke visible on top.
+                  void pip.open();
+                  control.startControllableShare();
+                }
+              : undefined
+          }
           onOpenStudio={FEATURES.studio ? () => setStudioOpen(true) : undefined}
           effectsOn={isStudioActive(studio.config)}
           onLeave={onLeave}
         />
       </footer>
+      <CallPip pipWindow={pip.pipWindow} />
       {FEATURES.studio && <StudioPanel open={studioOpen} onOpenChange={setStudioOpen} track={cameraVideo} stats={studio.stats} />}
       <PerfBadge stats={studio.stats} className="fixed top-16 left-4 z-50" />
     </>
