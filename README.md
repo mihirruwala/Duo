@@ -46,6 +46,29 @@ npm run dev                     # http://localhost:3000
 `npm run ext:build`, then load `extension/dist` at `chrome://extensions` (Developer mode → Load unpacked).
 Full guide: [`docs/EXTENSION.md`](docs/EXTENSION.md).
 
+## Deployment (Vercel + Supabase + LiveKit Cloud)
+
+Live: **https://duo-virid-eta.vercel.app** (Vercel project `mihirruwalas-projects/duo`, functions in `dub1` next to
+Supabase `eu-west-1`).
+
+```bash
+npx vercel@65.9.0 login                       # once
+npx vercel@65.9.0 link --project duo          # once per checkout
+npx vercel@65.9.0 deploy --prod               # deploy
+E2E_BASE_URL=https://duo-virid-eta.vercel.app \
+DUO_EXTENSION_ORIGINS=https://duo-virid-eta.vercel.app npx playwright test   # verify the live site
+```
+
+Production environment variables (Vercel → Settings → Environment Variables): everything in `.env.example`, with
+`NEXT_PUBLIC_SITE_URL` set to the production URL. `SUPABASE_SECRET_KEY`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` and
+`GIPHY_API_KEY` are stored as Vercel secrets. The extension for production users is built with
+`DUO_EXTENSION_ORIGINS="https://duo-virid-eta.vercel.app" npm run ext:build`.
+
+Supabase dashboard (one-time): **Authentication → URL Configuration**: Site URL = production URL, Redirect URLs include
+`https://duo-virid-eta.vercel.app/**` and `http://localhost:3000/**`. **Authentication → Sign In / Providers → Email**:
+Confirm email on. **Authentication → Emails → SMTP Settings**: a custom SMTP provider (required for confirmation emails
+to reach anyone outside your Supabase team).
+
 ## Scripts
 
 | Script                        | What it does                                                                                  |

@@ -166,6 +166,24 @@ so the E2E build binds the tab via a test hook and answers `getUserMedia({chrome
 Pressing a _global_ shortcut can't be automated, so the test invokes the same command handler. Both hooks exist only in
 `extension/dist-e2e` (verified absent from `extension/dist`). The real popup flow and the real shortcut are in `docs/MANUAL_TESTS.md`.
 
+## Deployment (2026-10-31)
+
+- Live at **https://duo-virid-eta.vercel.app** (Vercel, functions in `dub1`; Supabase `eu-west-1`; LiveKit Cloud).
+- Pre-flight: production dependency audit 0 vulnerabilities (moved the build-only `shadcn` CLI to devDependencies).
+- Verified on the live site:
+  - HTTPS redirect, HSTS (preload), CSP with per-request nonce (26/26 scripts), `frame-ancestors 'none'`, `upgrade-insecure-requests`
+  - anonymous visitors → `/sign-in`; token and GIF APIs → 401
+  - **full E2E suite 13/13 against production**: video/audio/screen share, chat incl. GIFs, outsider isolation,
+    remote control with the extension, rooms/invites, sign-up form
+- Found and fixed while preparing: sign-up/sign-in forms erased typed values after a validation error (React 19
+  `<form action>` reset). Regression test added.
+- Tests now create confirmed users via the admin API and delete them afterwards, so they work with "Confirm email" on.
+- Pending on the Supabase dashboard (not automatable from here): production Site/Redirect URLs, Confirm email on,
+  custom SMTP. Leftover test accounts from earlier runs (≈308 `duo-e2e-*@example.com`) still need deleting; the bulk
+  delete was blocked by the tool sandbox.
+- Recommended next: a separate Supabase project for production (dev and E2E currently share it), and Realtime
+  "Allow public access" off.
+
 ## Bugs found in user testing
 
 - **2026-10-31: "Disconnected" on join under `npm run dev`.** The `Room` was created once and reused across React StrictMode's

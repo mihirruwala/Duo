@@ -53,7 +53,7 @@ async function ownerContext(): Promise<BrowserContext> {
     channel: "chromium",
     headless: true,
     viewport: { width: 1280, height: 720 },
-    baseURL: `http://localhost:${process.env.E2E_PORT ?? 3100}`,
+    baseURL: process.env.E2E_BASE_URL ?? `http://localhost:${process.env.E2E_PORT ?? 3100}`,
     permissions: ["camera", "microphone"],
     args: [
       `--disable-extensions-except=${EXT}`,
