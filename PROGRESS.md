@@ -6,7 +6,7 @@ _Last updated: 2026-10-31_
 
 | Milestone | Status |
 |---|---|
-| M1 Foundation | **Built. Local gates verified; backend gate blocked on Supabase credentials** |
+| M1 Foundation | **✅ Complete. Gate verified against hosted Supabase** |
 | M2 Core video | Not started |
 | M3 Chat | Not started |
 | M4 Remote control | Not started |
@@ -41,11 +41,12 @@ _Last updated: 2026-10-31_
 | Anonymous redirects | Playwright: `/home`, `/r/*` → `/sign-in?next=…` | ✅ |
 | Responsive landing | Screenshots at 1440 px and 390 px, no horizontal overflow | ✅ |
 
-## Not verified yet (needs credentials)
+## M1 gate (hosted Supabase)
 
-- **M1 gate**: sign up → create room → join from a second browser session → third user rejected.
-  Automated in `tests/e2e/rooms.spec.ts`. Currently **skipped** because no Supabase project is configured.
-- Migration applied to real Supabase (`npm run db:push`). Verified only in PGlite so far.
+| What | How | Result |
+|---|---|---|
+| Migration applied | Anonymous REST probe of profiles/rooms/messages → `42501 permission denied` (tables exist, anon locked out) | ✅ |
+| Sign up → create room → second session joins via invite → third user rejected (dead invite + "Room not found" on direct URL + guessed slug) | `tests/e2e/rooms.spec.ts`, two isolated Chrome contexts, production build | ✅ 4/4 e2e passing |
 
 ## Known issues / decisions
 
@@ -57,5 +58,4 @@ _Last updated: 2026-10-31_
 
 ## Next steps
 
-1. Get Supabase credentials → `db:push` → run `npm run test:e2e` to close the M1 gate.
-2. M2: download native `livekit-server` (no Docker), token route with allowlist check, pre-call studio, call UI.
+1. M2: download native `livekit-server` (no Docker), token route with allowlist check, pre-call studio, call UI.
