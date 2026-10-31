@@ -44,7 +44,7 @@ async function fetchToken(slug: string): Promise<CallTokenResponse> {
 }
 
 export function RoomExperience({ slug, roomId, roomName, me, partner, gifsEnabled, aside }: Props) {
-  const content = <RoomPhases slug={slug} roomName={roomName} me={me} partner={partner} aside={aside} />;
+  const content = <RoomPhases slug={slug} roomId={roomId} roomName={roomName} me={me} partner={partner} aside={aside} />;
   if (!FEATURES.chat) return content;
   return (
     <ChatProvider roomId={roomId} slug={slug} me={me} partner={partner}>
@@ -54,7 +54,14 @@ export function RoomExperience({ slug, roomId, roomName, me, partner, gifsEnable
   );
 }
 
-function RoomPhases({ slug, roomName, me, partner, aside }: Pick<Props, "slug" | "roomName" | "me" | "partner" | "aside">) {
+function RoomPhases({
+  slug,
+  roomId,
+  roomName,
+  me,
+  partner,
+  aside,
+}: Pick<Props, "slug" | "roomId" | "roomName" | "me" | "partner" | "aside">) {
   const myName = me.name;
   const myHue = me.hue;
   const partnerName = partner?.name ?? null;
@@ -78,6 +85,7 @@ function RoomPhases({ slug, roomName, me, partner, aside }: Pick<Props, "slug" |
   if (phase.kind === "call") {
     return (
       <MeetingRoom
+        roomId={roomId}
         connection={phase.connection}
         prefs={phase.prefs}
         roomName={roomName}

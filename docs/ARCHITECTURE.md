@@ -86,7 +86,7 @@ end until confirmed. Sends are serialized per tab so `seq` order = typing order.
 history fetch can't drop newer events. On channel re-subscribe, `online` or tab-visible, the client resyncs:
 everything newer than its newest `seq`, plus a refresh of the latest page and its reactions/attachments.
 
-## 4. Remote-control protocol _(M4)_
+## 4. Remote-control protocol (M4, built; details and permission rationale in docs/EXTENSION.md)
 
 ### Why a tab-capture-bound extension
 
@@ -129,11 +129,11 @@ Controller page ──LiveKit reliable data (topic "duo.ctl")──▶ Owner pag
 
 ### Messages (Zod schemas in `src/shared/control.ts`, shared with the extension)
 
-Control plane: `ctl.request`, `ctl.approve {sessionId, expiresAt}`, `ctl.deny`, `ctl.revoke {reason}`,
-`ctl.end`, `ctl.state` (heartbeat).
-Input plane (only valid while approved): `in.move {x,y}`, `in.button {x,y,button,down,clickCount}`,
-`in.wheel {x,y,dx,dy}`, `in.key {type, key, code, modifiers}`, `in.text {text}`.
-Every input message carries `sessionId` and a monotonically increasing `seq`.
+Peer messages (LiveKit topic `duo.ctl`, all `{v:1,…}`): `request`, `approve {expiresAt}`, `deny`, `end {reason}`,
+`input {seq, e}` where `e` is `move {x,y}` · `button {x,y,button,down,clicks,mods}` · `wheel {x,y,dx,dy}` ·
+`key {phase,key,code,mods}` · `nav {back|forward|reload}`. Page ↔ extension: `hello`, `control.start/stop`, `input`,
+`share.stopped`, `approval.request/dismiss` ↔ `hello.ok`, `share.ready/cleared`, `control.started/ended/error`,
+`approval.response`, `emergency.stop`. Every input carries the `sessionId` and a strictly increasing `seq`.
 Coordinates are normalized `0..1` relative to the _video content box_ (letterboxing removed
 on the controller side) and mapped in the extension to CSS pixels using
 `Page.getLayoutMetrics().cssVisualViewport`. That covers DPR, zoom, scrollbars and resize.
@@ -149,8 +149,8 @@ on the controller side) and mapped in the extension to CSS pixels using
 ### Lifecycle
 
 `idle → requested → approved → (revoked | expired | ended)`; `requested → denied`.
-Hard stops: owner clicks Revoke (page or popup), emergency shortcut **Ctrl+Shift+Space**
-(on Mac: ⌘+Shift+Space via the `commands` API, so it works even when the DUO tab isn't focused),
+Hard stops: owner clicks Revoke (page or popup), emergency shortcut **Ctrl+Shift+9 / ⌘⇧9**
+(a `global` command, so it works even when Chrome isn't focused; Chrome only allows Ctrl+Shift+0–9 for global commands),
 target tab closed or navigated to a blocked URL, share stopped, LiveKit disconnect, expiry
 (default 15 min, per-room `control_max_seconds`). Every transition is written to `control_sessions`.
 

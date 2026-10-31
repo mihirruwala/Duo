@@ -53,3 +53,7 @@ supabase/.branches
 
 # local livekit binary
 /bin/
+
+# extension builds
+/extension/dist/
+/extension/dist-e2e/

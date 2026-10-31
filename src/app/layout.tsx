@@ -27,7 +27,8 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="en" className={`dark ${bricolage.variable} ${figtree.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col">
         <TooltipProvider delayDuration={300}>{children}</TooltipProvider>
-        <Toaster position="top-center" />
+        {/* Offset keeps toasts clear of the "Remote control active" banner. */}
+        <Toaster position="top-center" offset={{ top: 64 }} />
       </body>
     </html>
   );
