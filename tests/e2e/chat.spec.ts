@@ -132,7 +132,16 @@ test("chat: realtime, replies, reactions, edits, receipts, media, Moments, persi
     await host.getByRole("button", { name: "GIFs" }).click();
     await host.getByTestId("gif-search").fill("cat");
     await host.getByTestId("gif-results").getByRole("button").first().click();
-    await expect(guest.getByRole("button", { name: /Open GIF/ }).last()).toBeVisible({ timeout: 10_000 });
+    const gif = guest
+      .getByRole("button", { name: /Open GIF/ })
+      .last()
+      .locator("img");
+    await expect(gif).toBeVisible({ timeout: 10_000 });
+    // Actually decoded under the CSP (img-src allows only *.giphy.com for remote media).
+    await expect
+      .poll(() => gif.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth), { timeout: 15_000 })
+      .toBeGreaterThan(0);
+    expect(await gif.getAttribute("src")).toMatch(/^https:\/\/media[0-9]*\.giphy\.com\//);
   }
 
   // Moments: Gabe saves the photo → Hana sees it in the shared collection.
@@ -251,4 +260,27 @@ test("rapid messages right after opening chat all arrive, in the order they were
   await host.reload();
   await openChat(host);
   await expect.poll(() => bodies(host), { timeout: 15_000 }).toEqual(texts);
+});
+
+test("GIF proxy requires a session, refuses cross-site calls, and never exposes the key", async ({
+  browser,
+  playwright,
+  baseURL,
+}) => {
+  test.skip(!hasGiphy, "GIPHY_API_KEY not set");
+  const user = await newUserPage(browser, "Hana");
+  const ok = await user.request.get("/api/gifs?q=hello", { headers: { "sec-fetch-site": "same-origin" } });
+  expect(ok.status()).toBe(200);
+  const text = await ok.text();
+  expect(text).not.toContain(process.env.GIPHY_API_KEY!);
+  const body = JSON.parse(text) as { gifs: { url: string }[] };
+  expect(body.gifs.length).toBeGreaterThan(0);
+  for (const g of body.gifs) expect(g.url).toMatch(/^https:\/\/media[0-9]*\.giphy\.com\/[^?]+$/);
+
+  const anon = await playwright.request.newContext({ baseURL });
+  expect((await anon.get("/api/gifs?q=hello", { headers: { "sec-fetch-site": "same-origin" } })).status()).toBe(401);
+  const csrf = await user.request.get("/api/gifs?q=hello", { headers: { "sec-fetch-site": "cross-site" } });
+  expect(csrf.status()).toBe(403);
+  const tooLong = await user.request.get(`/api/gifs?q=${"a".repeat(200)}`, { headers: { "sec-fetch-site": "same-origin" } });
+  expect(tooLong.status()).toBe(400);
 });

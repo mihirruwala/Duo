@@ -157,6 +157,5 @@ picker can't be clicked in automation). Real devices and real screen capture are
 
 ## Next steps
 
-1. Add `GIPHY_API_KEY`, then run the GIF part of the chat e2e (it auto-enables when the key is present).
-2. Run the M2 + M3 sections of `docs/MANUAL_TESTS.md` on two real machines.
-3. M4: remote control (Chrome extension, approval flow, input injection, revoke, emergency stop, audit log).
+1. Run the M2 + M3 sections of `docs/MANUAL_TESTS.md` on two real machines.
+2. M4: remote control (Chrome extension, approval flow, input injection, revoke, emergency stop, audit log).
