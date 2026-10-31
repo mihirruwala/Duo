@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { buildCsp, generateNonce } from "@/lib/security/csp";
 
-const PROTECTED_PREFIXES = ["/home", "/r/"];
+const PROTECTED_PREFIXES = ["/home", "/r/", "/settings"];
 const AUTH_PAGES = ["/sign-in", "/sign-up"];
 
 /**

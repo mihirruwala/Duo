@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { LogOut } from "lucide-react";
+import Link from "next/link";
+import { LogOut, Settings } from "lucide-react";
 import { toast } from "sonner";
 import { DuoAvatar } from "@/components/duo/avatar";
 import {
@@ -28,6 +29,11 @@ export function UserMenu({ name, hue }: { name: string; hue: number }) {
       <DropdownMenuContent align="end" className="w-48">
         <DropdownMenuLabel className="truncate">{name}</DropdownMenuLabel>
         <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link href="/settings">
+            <Settings /> Settings
+          </Link>
+        </DropdownMenuItem>
         <DropdownMenuItem
           onSelect={async () => {
             const { error } = await getBrowserClient().auth.signOut();

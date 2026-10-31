@@ -19,7 +19,7 @@ import { friendlyError } from "@/shared/errors";
 import type { MemberRole } from "@/shared/database";
 
 /** Host deletes the room (and all its history); a guest removes themselves from the allowlist. */
-export function RoomMembershipActions({ roomId, role }: { roomId: string; role: MemberRole }) {
+export function RoomMembershipActions({ roomId, slug, role }: { roomId: string; slug: string; role: MemberRole }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -29,13 +29,19 @@ export function RoomMembershipActions({ roomId, role }: { roomId: string; role: 
     startTransition(async () => {
       const supabase = getBrowserClient();
       const { data: auth } = await supabase.auth.getUser();
-      const { error } = isHost
-        ? await supabase.from("rooms").delete().eq("id", roomId)
-        : await supabase
-            .from("room_members")
-            .delete()
-            .eq("room_id", roomId)
-            .eq("user_id", auth.user?.id ?? "");
+      let error: { message?: string; code?: string } | null = null;
+      if (isHost) {
+        // Server route: removes the room's files from storage too, then the room.
+        const res = await fetch(`/api/rooms/${encodeURIComponent(slug)}/delete`, { method: "POST" });
+        if (!res.ok)
+          error = ((await res.json().catch(() => null)) as { message?: string } | null) ?? { message: "delete_failed" };
+      } else {
+        ({ error } = await supabase
+          .from("room_members")
+          .delete()
+          .eq("room_id", roomId)
+          .eq("user_id", auth.user?.id ?? ""));
+      }
       if (error) {
         toast.error(friendlyError(error));
         return;

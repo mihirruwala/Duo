@@ -73,7 +73,7 @@ function RoomDetails({ room, me, partner }: { room: RoomWithMembers; me: RoomMem
           <NewInviteButton roomId={room.id} />
         </div>
       )}
-      <RoomMembershipActions roomId={room.id} role={me.role} />
+      <RoomMembershipActions roomId={room.id} slug={room.slug} role={me.role} />
     </div>
   );
 }
