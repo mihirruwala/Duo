@@ -1,0 +1,90 @@
+:root {
+  color-scheme: dark;
+  --bg: #1a1420;
+  --surface: #251d2c;
+  --cream: #fff4e6;
+  --haze: #b6a9c2;
+  --coral: #ff8a6e;
+  --violet: #a593ff;
+  --danger: #ff5a5a;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  width: 320px;
+  background: var(--bg);
+  color: var(--cream);
+  font:
+    14px/1.45 system-ui,
+    -apple-system,
+    sans-serif;
+}
+header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgb(255 255 255 / 8%);
+}
+main {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+footer {
+  padding: 10px 14px 14px;
+  color: var(--haze);
+  font-size: 12px;
+}
+kbd {
+  background: var(--surface);
+  border-radius: 5px;
+  padding: 1px 6px;
+  font: inherit;
+}
+p {
+  margin: 0;
+}
+.muted {
+  color: var(--haze);
+}
+.card {
+  background: var(--surface);
+  border-radius: 14px;
+  padding: 12px;
+}
+.live {
+  border: 1px solid rgb(255 90 90 / 50%);
+}
+button {
+  width: 100%;
+  border: 0;
+  border-radius: 12px;
+  padding: 11px 14px;
+  font:
+    600 14px system-ui,
+    sans-serif;
+  cursor: pointer;
+}
+button:focus-visible {
+  outline: 2px solid var(--coral);
+  outline-offset: 2px;
+}
+.primary {
+  background: linear-gradient(120deg, var(--coral), var(--violet));
+  color: #140f19;
+}
+.danger {
+  background: var(--danger);
+  color: #140f19;
+}
+.ghost {
+  background: var(--surface);
+  color: var(--cream);
+}
+.error {
+  color: var(--danger);
+}

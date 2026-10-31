@@ -47,6 +47,12 @@ export async function newUserPage(browser: Browser, name: string, opts: { fakeDi
   openContexts.add(context);
   if (opts.fakeDisplay) await context.addInitScript(FAKE_DISPLAY_MEDIA);
   const page = await context.newPage();
+  await signUpOn(page, name);
+  return page;
+}
+
+/** Create an account in an existing page (e.g. one inside an extension-enabled context). */
+export async function signUpOn(page: Page, name: string): Promise<void> {
   await page.goto("/sign-up");
   await page.getByLabel("Your name").fill(name);
   const email = `duo-e2e-${name.toLowerCase()}-${run}-${++userSeq}@example.com`;
@@ -55,7 +61,6 @@ export async function newUserPage(browser: Browser, name: string, opts: { fakeDi
   await page.getByLabel("Password").fill(PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
   await expect(page).toHaveURL(/\/home$/);
-  return page;
 }
 
 /** Host creates a room, guest redeems the invite. Returns the room URL and invite URL. */

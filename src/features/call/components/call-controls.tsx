@@ -1,6 +1,7 @@
 "use client";
 
-import { MonitorUp, MonitorX, Mic, MicOff, PhoneOff, Video, VideoOff } from "lucide-react";
+import { MonitorUp, MonitorX, Mic, MicOff, MousePointerClick, PhoneOff, Video, VideoOff } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { DeviceMenu } from "./device-menu";
@@ -61,6 +62,7 @@ export function CallControls({
   onToggleMic,
   onToggleCam,
   onToggleShare,
+  onShareControllable,
   onLeave,
 }: {
   micOn: boolean;
@@ -72,6 +74,8 @@ export function CallControls({
   onToggleMic: () => void;
   onToggleCam: () => void;
   onToggleShare: () => void;
+  /** Present when remote control is available: share a tab through the DUO extension. */
+  onShareControllable?: () => void;
   onLeave: () => void;
 }) {
   return (
@@ -98,17 +102,45 @@ export function CallControls({
         </Control>
         <DeviceMenu kind="video" />
       </span>
-      {canShare && (
-        <Control
-          label={shareBlockedBy ? `${shareBlockedBy} is sharing` : sharing ? "Stop sharing" : "Share screen"}
-          tone={sharing ? "accent" : "neutral"}
-          pressed={sharing}
-          disabled={!!shareBlockedBy}
-          onClick={onToggleShare}
-        >
-          {sharing ? <MonitorX /> : <MonitorUp />}
-        </Control>
-      )}
+      {canShare &&
+        (sharing || shareBlockedBy || !onShareControllable ? (
+          <Control
+            label={shareBlockedBy ? `${shareBlockedBy} is sharing` : sharing ? "Stop sharing" : "Share screen"}
+            tone={sharing ? "accent" : "neutral"}
+            pressed={sharing}
+            disabled={!!shareBlockedBy}
+            onClick={onToggleShare}
+          >
+            {sharing ? <MonitorX /> : <MonitorUp />}
+          </Control>
+        ) : (
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              aria-label="Share screen"
+              className="grid size-12 place-items-center rounded-2xl bg-ink-3 text-foreground transition-colors hover:bg-ink-4 [&_svg]:size-5"
+            >
+              <MonitorUp />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent side="top" align="center" className="w-80">
+              <DropdownMenuItem onSelect={onToggleShare} className="items-start gap-3 py-2.5">
+                <MonitorUp className="mt-0.5" />
+                <span>
+                  <span className="block font-semibold">Share screen, window or tab</span>
+                  <span className="block text-xs text-muted-foreground">They can watch, not control.</span>
+                </span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={onShareControllable} className="items-start gap-3 py-2.5">
+                <MousePointerClick className="mt-0.5 text-coral" />
+                <span>
+                  <span className="block font-semibold">Share a tab they can control</span>
+                  <span className="block text-xs text-muted-foreground">
+                    Uses the DUO Control extension. You approve every session.
+                  </span>
+                </span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ))}
       <span className="mx-1 h-8 w-px bg-white/10" aria-hidden />
       <Control label="Leave call" tone="leave" onClick={onLeave}>
         <PhoneOff />

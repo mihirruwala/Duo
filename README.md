@@ -2,7 +2,7 @@
 
 A private, two-person video space: connect, share your screen, hand over control, chat, and play with live effects.
 
-> Status: **Milestone 1 (Foundation)**. See [`PROGRESS.md`](PROGRESS.md) for what's built and verified.
+> Status: **Milestones 1–4 complete** (rooms, video, chat, remote control). See [`PROGRESS.md`](PROGRESS.md) for what's built and verified.
 > Architecture, protocols and design decisions: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ## Stack
@@ -41,6 +41,11 @@ npm run dev                     # http://localhost:3000
 
 > Local Supabase (`supabase start`) also works if you have Docker. `supabase/config.toml` is already set up.
 
+### 3. Remote control extension (optional, for the person sharing)
+
+`npm run ext:build`, then load `extension/dist` at `chrome://extensions` (Developer mode → Load unpacked).
+Full guide: [`docs/EXTENSION.md`](docs/EXTENSION.md).
+
 ## Scripts
 
 | Script                        | What it does                                                                                  |
@@ -53,6 +58,7 @@ npm run dev                     # http://localhost:3000
 | `npm run format`              | Prettier                                                                                      |
 | `npm run db:push`             | Apply migrations to the linked Supabase project                                               |
 | `npm run db:types`            | Regenerate DB types from the linked project                                                   |
+| `npm run ext:build`           | Build the Chrome extension into `extension/dist` (`DUO_EXTENSION_ORIGINS` for production)     |
 
 ## Testing
 

@@ -123,11 +123,61 @@ picker can't be clicked in automation). Real devices and real screen capture are
 | DB policies                  | 21 PGlite tests (realtime authorization, storage, broadcasts, RPCs); one policy mutation-checked                                                         | ✅                        |
 | Suites                       | Unit+DB 88/88; e2e 9/9 on the production build and 9/9 on `next dev`                                                                                     | ✅                        |
 
+## M4: completed
+
+- **Extension** (`extension/`, MV3, built with `npm run ext:build`): permissions `debugger`, `tabCapture`, `activeTab`,
+  `notifications`. No host permissions, no `tabs`. Exact-origin `externally_connectable`, stable ID, global emergency
+  stop **⌘⇧9 / Ctrl+Shift+9**. Popup: share this tab / stop sharing / revoke. Input via CDP into the one shared tab ID.
+  An isolated-world overlay on that tab (frame, "Name is controlling" banner with the shortcut, their cursor), a red CTRL
+  badge, a notification for approvals. Ends on: revoke, emergency stop, expiry, tab closed, blocked navigation,
+  debugging bar closed, DUO page gone, share stopped.
+- **Protocol** (`src/shared/control.ts`, 47 unit tests): Zod schemas for peer and extension messages, letterbox-aware
+  coordinate mapping, virtual key codes, key-combo allowlist (paste + browser shortcuts blocked, DevTools combos too),
+  URL policy, token-bucket rate limit.
+- **DUO page:** Share menu (view-only vs. controllable tab), tab-pick and install dialogs, approval dialog (explains the
+  debugging bar), red "Remote control active" banner with countdown + Revoke + shortcut, controller bar
+  (request/waiting/in control/hand back), input-capture surface with "You" cursor, audit-log writes for every transition.
+- Docs: `docs/EXTENSION.md` (install, permissions rationale, debugger vs content-script evaluation, security model).
+
+## M4 gate
+
+All of this runs in one E2E test. The owner uses Playwright's Chromium with the real extension (E2E build); the controller
+is a separate Chrome session; input travels controller → LiveKit Cloud → owner page → extension → CDP → a real tab.
+
+| What                                                                                                           | Result        |
+| -------------------------------------------------------------------------------------------------------------- | ------------- |
+| Nothing reaches the tab before approval (click sent while "waiting")                                           | ✅ 0 clicks   |
+| Approval dialog → banner on owner, "You're controlling" on controller, overlay injected on the tab             | ✅            |
+| Click (event `isTrusted: true`), double-click, right-click                                                     | ✅            |
+| Typing into a field, ⌘/Ctrl+A then retype                                                                      | ✅            |
+| Paste refused (owner's clipboard stays private)                                                                | ✅            |
+| Scroll inside a scroll container; drag (≥ 200 px)                                                              | ✅            |
+| Another open tab receives nothing                                                                              | ✅            |
+| Click a link → page 2 → control and overlay continue                                                           | ✅            |
+| Revoke → controller UI updates (measured), further input ignored, overlay removed                              | ✅ 131–238 ms |
+| Emergency-stop handler ends control (command handler invoked via E2E hook)                                     | ✅            |
+| Shared tab navigates to DUO (blocked) → control ends                                                           | ✅            |
+| Non-DUO pages have no `chrome.runtime` (can't reach the extension)                                             | ✅            |
+| Binding the DUO tab itself is refused by the extension                                                         | ✅            |
+| Audit log rows: `revoked:owner_revoked`, `revoked:emergency_stop`, `ended:blocked_url`, all with approval time | ✅            |
+
+**Test doubles, stated plainly:** (1) choosing the tab in the real popup needs a human click (Chrome's `activeTab` grant),
+so the E2E build binds the tab via a test hook and answers `getUserMedia({chromeMediaSource:"tab"})` with a canvas. (2)
+Pressing a _global_ shortcut can't be automated, so the test invokes the same command handler. Both hooks exist only in
+`extension/dist-e2e` (verified absent from `extension/dist`). The real popup flow and the real shortcut are in `docs/MANUAL_TESTS.md`.
+
 ## Bugs found in user testing
 
 - **2026-10-31: "Disconnected" on join under `npm run dev`.** The `Room` was created once and reused across React StrictMode's
   dev double-mount, so the second `connect()` ran on a Room disconnected mid-connect. Tests only ran the production build, so they
   missed it. Fix: a fresh `Room` per effect run, exposed to the UI only after it connects. Added `npm run test:e2e:dev` so dev mode stays covered.
+
+### Bugs found while building M4 (fixed)
+
+- **DevTools shortcuts slipped through the key filter** (⌘⌥I / Ctrl+Shift+I: "i" was allowed for italics). Alt with
+  ⌘/Ctrl is now always blocked, and Shift only with undo/redo/selection keys. Unit tests added.
+- Adding the Share menu broke the M2 call test's one-click share; the test caught it and now uses the menu.
+- Toasts covered the control banner; the emergency-shortcut label could be stale before the extension reported the real one.
 
 ### Bugs found while building M3 (fixed, with regression tests)
 
@@ -150,6 +200,9 @@ picker can't be clicked in automation). Real devices and real screen capture are
   the Supabase storage domain, never DUO's origin, and SVG/HTML are refused, so this can't become XSS on DUO.
 - Several files sent at once are placed in the order their uploads finish. Text/GIF/sticker order is strict.
 - Media gallery shows the latest 200 items.
+- Remote control: expiry isn't exercised in E2E (shortest room limit is 60 s); it's enforced in three places (DB `expires_at`, owner
+  page timer, extension timer). Non-Latin IME composition isn't forwarded (only direct key input).
+- The extension's minified `background.js` is ~458 KB, mostly Zod; fine unpacked, worth trimming (e.g. `zod/mini`) before a Web Store release.
 - Recommended: Supabase Dashboard → Realtime → Settings → disable "Allow public access" (defence in depth; the probe
   above shows public channels already receive nothing).
 - `supabase/seed.sql` not written: seeding needs local Supabase (Docker). The e2e suite creates its own users.
@@ -157,5 +210,5 @@ picker can't be clicked in automation). Real devices and real screen capture are
 
 ## Next steps
 
-1. Run the M2 + M3 sections of `docs/MANUAL_TESTS.md` on two real machines.
-2. M4: remote control (Chrome extension, approval flow, input injection, revoke, emergency stop, audit log).
+1. Run the M2–M4 sections of `docs/MANUAL_TESTS.md` on two real machines (especially the real popup flow and ⌘⇧9).
+2. M5: DUO Studio (MediaPipe face filters, background blur/replace, live effects, perf measurements).

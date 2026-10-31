@@ -22,6 +22,10 @@ import { FEATURES } from "@/shared/features";
 import type { CallTokenResponse } from "@/shared/call";
 import type { DevicePrefs } from "../device-prefs";
 import { describeMediaError, isUserCancel } from "../media-errors";
+import { ControlProvider, useControl } from "@/features/control/control-provider";
+import { ControllerBar, OwnerControlLayer } from "@/features/control/components/control-ui";
+import { InputCapture } from "@/features/control/components/input-capture";
+import { CONTROLLABLE_TRACK_NAME } from "@/shared/control";
 import { CallControls } from "./call-controls";
 import { ParticipantTile } from "./participant-tile";
 import { ScreenShareStage } from "./screen-share-stage";
@@ -71,12 +75,14 @@ async function enableWithFallback(enable: (deviceId?: string) => Promise<unknown
 }
 
 export function MeetingRoom({
+  roomId,
   connection,
   prefs,
   roomName,
   partnerName,
   onLeave,
 }: {
+  roomId: string;
   connection: CallTokenResponse;
   prefs: DevicePrefs;
   roomName: string;
@@ -144,7 +150,10 @@ export function MeetingRoom({
     <div className="fixed inset-0 z-40 flex flex-col bg-background" data-testid="meeting-room">
       {room ? (
         <RoomContext.Provider value={room}>
-          <CallLayout roomName={roomName} partnerName={partnerName} onLeave={leave} />
+          <ControlProvider roomId={roomId}>
+            <CallLayout roomName={roomName} partnerName={partnerName} onLeave={leave} />
+            {FEATURES.remoteControl && <OwnerControlLayer />}
+          </ControlProvider>
           <RoomAudioRenderer />
         </RoomContext.Provider>
       ) : (
@@ -165,6 +174,7 @@ function CallLayout({ roomName, partnerName, onLeave }: { roomName: string; part
   const { canPlayAudio, startAudio } = useAudioPlayback();
   const [modKey] = useState<"Meta" | "Control">(() => (navigator.userAgent.includes("Mac") ? "Meta" : "Control"));
   const partnerLeft = usePartnerLeft();
+  const control = useControl();
 
   const tracks = useTracks(
     [
@@ -194,6 +204,8 @@ function CallLayout({ roomName, partnerName, onLeave }: { roomName: string; part
     }
   }
   async function toggleShare() {
+    // A tab shared through the extension is stopped via the control layer (it also tells the extension).
+    if (isScreenShareEnabled && control.sharingControllable) return control.stopControllableShare();
     try {
       await localParticipant.setScreenShareEnabled(!isScreenShareEnabled, {
         audio: true,
@@ -270,7 +282,27 @@ function CallLayout({ roomName, partnerName, onLeave }: { roomName: string; part
       <main className="flex min-h-0 flex-1 flex-col gap-3 p-4 sm:p-6">
         {share ? (
           <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[1fr_15rem]">
-            <ScreenShareStage trackRef={share} onStopLocal={() => void toggleShare()} />
+            <ScreenShareStage
+              trackRef={share}
+              onStopLocal={() => void toggleShare()}
+              localTitle={control.sharingControllable ? control.sharedTabTitle : null}
+              renderOverlay={(container) =>
+                FEATURES.remoteControl &&
+                !share.participant.isLocal &&
+                share.publication.trackName === CONTROLLABLE_TRACK_NAME ? (
+                  <>
+                    {control.control.phase === "active" && control.control.role === "controller" && (
+                      <InputCapture
+                        videoContainer={container}
+                        onInput={control.sendInput}
+                        name={share.participant.name || "your person"}
+                      />
+                    )}
+                    <ControllerBar ownerName={share.participant.name || "Your person"} />
+                  </>
+                ) : null
+              }
+            />
             <div className="flex gap-3 lg:flex-col" aria-label="Cameras">
               {[remoteCam, localCam].map((t) =>
                 t ? (
@@ -307,6 +339,7 @@ function CallLayout({ roomName, partnerName, onLeave }: { roomName: string; part
           onToggleMic={() => void toggleMic()}
           onToggleCam={() => void toggleCam()}
           onToggleShare={() => void toggleShare()}
+          onShareControllable={FEATURES.remoteControl ? control.startControllableShare : undefined}
           onLeave={onLeave}
         />
       </footer>

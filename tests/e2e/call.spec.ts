@@ -62,6 +62,7 @@ test("two people see and hear each other, share a screen, and leave cleanly", as
 
   // Screen share appears live on the other side.
   await host.getByRole("button", { name: "Share screen" }).click();
+  await host.getByRole("menuitem", { name: /Share screen, window or tab/ }).click();
   await expect(guest.getByTestId("share-remote")).toContainText("Hana is sharing their screen");
   await expectVideoPlaying(guest, '[data-testid="share-remote"]');
   await expect(host.getByTestId("share-local")).toContainText("You are sharing your screen");
@@ -82,6 +83,7 @@ test("two people see and hear each other, share a screen, and leave cleanly", as
 
   // Share again, then stop from the in-app control.
   await host.getByRole("button", { name: "Share screen" }).click();
+  await host.getByRole("menuitem", { name: /Share screen, window or tab/ }).click();
   await expect(guest.getByTestId("share-remote")).toBeVisible();
   await host.getByRole("button", { name: "Stop sharing" }).first().click();
   await expect(guest.getByTestId("share-remote")).toHaveCount(0, { timeout: 15_000 });

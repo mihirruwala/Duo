@@ -63,3 +63,26 @@ Tick each box and note the Chrome version and OS.
 - [ ] During a call, the chat floats above the video and doesn't block the call controls.
 - [ ] Phone-width window: chat opens full screen and is usable.
 - [ ] Sign in on a second device as the same user: full history, reactions and Moments are there.
+
+## M4: remote control (needs the extension on the sharer's machine: docs/EXTENSION.md)
+
+- [ ] Fresh install: Chrome shows the `debugger` permission warning; the popup says "Open your DUO call first" until DUO is open.
+- [ ] In a call: Share → "Share a tab they can control" → steps dialog → on another tab click DUO Control → "Share this tab
+      with DUO" → you return to DUO and the other machine sees that tab live.
+- [ ] Popup on a `chrome://settings` tab and on the Chrome Web Store: sharing is refused with a clear message.
+- [ ] Controller: Request control → owner gets the in-page dialog. With DUO in a background window, a system notification
+      appears instead; Approve from the notification works.
+- [ ] After Approve: red banner + countdown in DUO, red CTRL badge, coral frame + banner + named cursor on the tab, Chrome's
+      debugging bar. Controller sees "You're controlling … · mm:ss".
+- [ ] Controller can: click buttons, double-click a word to select it, right-click (context menu opens on the owner side),
+      drag a slider, scroll a long page with the trackpad, type into a search box, ⌘/Ctrl+A / C / Z, follow links, use back/forward.
+- [ ] Controller can't: ⌘/Ctrl+V (nothing pasted), ⌘/Ctrl+W/T/L (no effect on the owner's browser), switch tabs, open DevTools.
+- [ ] Mapping stays accurate after: resizing the owner's window, zooming the shared page to 150%, on a Retina and a 1× display,
+      with the controller's DUO window at different sizes/aspect ratios.
+- [ ] **⌘⇧9 / Ctrl+Shift+9** ends control instantly: with DUO focused, with the shared tab focused, and with another app
+      (e.g. Finder) focused.
+- [ ] Each also ends control instantly: Revoke in DUO, Revoke in the popup, closing Chrome's debugging bar, closing the shared
+      tab, navigating it to `chrome://settings`, stopping the share, the controller pressing Hand back, either person leaving.
+- [ ] After a session ends, the frame/banner/cursor disappear from the tab and the badge clears.
+- [ ] Leave a session running past the room's limit (set `control_max_seconds` to 60 in the DB) → it ends by itself on both sides.
+- [ ] Supabase → `control_sessions` shows each session with status, approval time and end reason.

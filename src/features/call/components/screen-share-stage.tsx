@@ -1,19 +1,31 @@
 "use client";
 
-import { useRef } from "react";
+import { useState } from "react";
 import { VideoTrack, type TrackReference } from "@livekit/components-react";
 import { Maximize2, MonitorUp, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 /** Large shared-screen view. The local share shows a placeholder to avoid an infinite mirror. */
-export function ScreenShareStage({ trackRef, onStopLocal }: { trackRef: TrackReference; onStopLocal: () => void }) {
-  const stageRef = useRef<HTMLDivElement>(null);
+export function ScreenShareStage({
+  trackRef,
+  onStopLocal,
+  localTitle,
+  renderOverlay,
+}: {
+  trackRef: TrackReference;
+  onStopLocal: () => void;
+  /** Set when the local share is a tab shared through the DUO extension. */
+  localTitle?: string | null;
+  /** Extra layers over the shared video (remote-control surface and bar). */
+  renderOverlay?: (videoContainer: HTMLElement | null) => React.ReactNode;
+}) {
+  const [stage, setStage] = useState<HTMLDivElement | null>(null);
   const isLocal = trackRef.participant.isLocal;
   const name = trackRef.participant.name || "Someone";
 
   return (
     <div
-      ref={stageRef}
+      ref={setStage}
       data-testid={isLocal ? "share-local" : "share-remote"}
       className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-[1.75rem] bg-ink-0 ring-1 ring-white/8"
     >
@@ -22,7 +34,11 @@ export function ScreenShareStage({ trackRef, onStopLocal }: { trackRef: TrackRef
           <span className="size-1.5 animate-pulse rounded-full bg-ink-0" aria-hidden /> LIVE
         </span>
         <span className="truncate text-sm font-semibold" role="status">
-          {isLocal ? "You are sharing your screen" : `${name} is sharing their screen`}
+          {isLocal
+            ? localTitle
+              ? `You are sharing “${localTitle}”`
+              : "You are sharing your screen"
+            : `${name} is sharing their screen`}
         </span>
         {!isLocal && (
           <Button
@@ -30,7 +46,7 @@ export function ScreenShareStage({ trackRef, onStopLocal }: { trackRef: TrackRef
             size="icon-sm"
             className="ml-auto bg-black/40 backdrop-blur"
             aria-label="Full screen"
-            onClick={() => void stageRef.current?.requestFullscreen?.()}
+            onClick={() => void stage?.requestFullscreen?.()}
           >
             <Maximize2 />
           </Button>
@@ -43,9 +59,13 @@ export function ScreenShareStage({ trackRef, onStopLocal }: { trackRef: TrackRef
             <span className="grid size-16 place-items-center rounded-3xl bg-ink-3 text-coral">
               <MonitorUp className="size-8" aria-hidden />
             </span>
-            <p className="text-lg font-bold">Your screen is live for the other person</p>
+            <p className="text-lg font-bold">
+              {localTitle ? `“${localTitle}” is live for the other person` : "Your screen is live for the other person"}
+            </p>
             <p className="text-sm text-muted-foreground">
-              They see what you shared. Stop here or from the browser&apos;s own bar.
+              {localTitle
+                ? "They can ask to control this tab. Nothing happens until you approve."
+                : "They see what you shared. Stop here or from the browser's own bar."}
             </p>
             <Button variant="danger" onClick={onStopLocal}>
               <X /> Stop sharing
@@ -55,6 +75,7 @@ export function ScreenShareStage({ trackRef, onStopLocal }: { trackRef: TrackRef
       ) : (
         <VideoTrack trackRef={trackRef} className="h-full w-full bg-black object-contain" />
       )}
+      {renderOverlay?.(stage)}
     </div>
   );
 }

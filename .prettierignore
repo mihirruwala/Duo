@@ -5,3 +5,5 @@ src/components/ui
 supabase/.temp
 playwright-report
 test-results
+extension/dist
+extension/dist-e2e
