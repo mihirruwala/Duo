@@ -1,6 +1,6 @@
 # DUO
 
-A private, two-person video space: connect, share your screen, hand over control, chat, and play with live effects.
+A private video-call space for two people. Call, chat, share your screen, and with permission, let the other person take the wheel in a browser tab.
 
 > Status: **Milestones 1–4 complete** (rooms, video, chat, remote control). See [`PROGRESS.md`](PROGRESS.md) for what's built and verified.
 > Architecture, protocols and design decisions: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
