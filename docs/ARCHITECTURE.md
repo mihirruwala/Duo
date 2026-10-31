@@ -154,7 +154,7 @@ Hard stops: owner clicks Revoke (page or popup), emergency shortcut **Ctrl+Shift
 target tab closed or navigated to a blocked URL, share stopped, LiveKit disconnect, expiry
 (default 15 min, per-room `control_max_seconds`). Every transition is written to `control_sessions`.
 
-## 5. Effects pipeline _(M5)_
+## 5. Effects pipeline (M5, built; measured numbers in PROGRESS.md)
 
 ```
 camera MediaStreamTrack

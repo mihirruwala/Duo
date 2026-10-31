@@ -18,6 +18,8 @@ const eslintConfig = defineConfig([
     "bin/**",
     "extension/dist/**",
     "extension/dist-e2e/**",
+    "public/mediapipe/**",
+    "public/studio/**",
   ]),
 ]);
 

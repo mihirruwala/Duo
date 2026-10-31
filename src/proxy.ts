@@ -66,7 +66,7 @@ export default async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     {
-      source: "/((?!api|_next/static|_next/image|favicon.ico|icon.svg|mediapipe|models|stickers|backgrounds).*)",
+      source: "/((?!api|_next/static|_next/image|favicon.ico|icon.svg|mediapipe|models|stickers|backgrounds|studio).*)",
       missing: [
         { type: "header", key: "next-router-prefetch" },
         { type: "header", key: "purpose", value: "prefetch" },

@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "typecheck": "next typegen && tsc --noEmit",
+    "typecheck": "next typegen && tsc --noEmit && tsc --noEmit -p src/features/studio/worker",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",
@@ -20,10 +20,14 @@
     "livekit": "bash scripts/livekit-dev.sh",
     "test:e2e:dev": "E2E_DEV=1 E2E_PORT=3200 playwright test",
     "ext:build": "node scripts/build-extension.mjs",
-    "ext:build:e2e": "node scripts/build-extension.mjs --e2e"
+    "ext:build:e2e": "node scripts/build-extension.mjs --e2e",
+    "studio:prepare": "node scripts/prepare-studio.mjs",
+    "predev": "npm run studio:prepare",
+    "prebuild": "node scripts/prepare-studio.mjs --minify"
   },
   "dependencies": {
     "@livekit/components-react": "2.9.24",
+    "@mediapipe/tasks-vision": "1.2.0",
     "@supabase/ssr": "0.12.7",
     "@supabase/supabase-js": "2.118.0",
     "class-variance-authority": "0.7.1",

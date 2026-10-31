@@ -1,0 +1,10 @@
+{
+  "extends": "../../../../tsconfig.json",
+  "compilerOptions": {
+    "lib": ["esnext", "webworker"],
+    "noEmit": true,
+    "plugins": []
+  },
+  "include": ["./**/*.ts", "../../../shared/studio.ts"],
+  "exclude": []
+}

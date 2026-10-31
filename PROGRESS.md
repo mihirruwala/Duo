@@ -166,6 +166,47 @@ so the E2E build binds the tab via a test hook and answers `getUserMedia({chrome
 Pressing a _global_ shortcut can't be automated, so the test invokes the same command handler. Both hooks exist only in
 `extension/dist-e2e` (verified absent from `extension/dist`). The real popup flow and the real shortcut are in `docs/MANUAL_TESTS.md`.
 
+## M5: completed
+
+- **Pipeline:** camera → `MediaStreamTrackProcessor` → transferable stream → **classic Web Worker** → MediaPipe
+  ImageSegmenter + FaceLandmarker (GPU delegate, CPU fallback; loaded lazily, only for looks that need them) → WebGL2
+  compositor on an OffscreenCanvas (separable blur at ¼ res, feathered person mask with temporal smoothing,
+  cover-fit backgrounds, effect shaders) → 2D prop pass → `VideoFrame` → `MediaStreamTrackGenerator` → LiveKit
+  `setProcessor()` (replaceTrack, no renegotiation). Idle = processor removed, zero cost.
+- **Shipped looks:** backgrounds: blur (adjustable), Cozy room, Spaceship, Anime sky, Tropical escape, your own image.
+  Live effects: Black & white, Vintage film, VHS, Retro webcam, Pixelate, Night vision, Invert. Face filters: Puppy,
+  Kitty, Cool shades, Big eyes, Crown, Floating hearts, Confetti. All art is original (SVG).
+- **Studio UI:** categories Animals / Funny / Cartoon / Backgrounds / Live effects, quick toggles (blur + strength,
+  VHS, face tracking), live preview, custom upload, "Turn everything off". Available in pre-call and in-call (Effects button).
+- **Self-hosted assets:** MediaPipe WASM copied at build (`scripts/prepare-studio.mjs`), models vendored in
+  `public/models` (Apache-2.0), CSP unchanged.
+- **Adaptive quality:** 3 levels (segmentation resolution / landmark cadence), warm-up frames ignored, last resort turns
+  heavy features off with a toast. Dev/`?debug=1` read-out: fps, ms/frame, per-model time and delegate.
+
+## M5 gate
+
+| What                                  | How (sampled from the _remote_ participant's decoded video)                  | Result             |
+| ------------------------------------- | ---------------------------------------------------------------------------- | ------------------ |
+| Effect visible to the other person    | Black & white: remote saturation                                             | ✅ 0.000           |
+| Switch mid-call without renegotiation | Invert: remote green camera becomes magenta                                  | ✅                 |
+| Image background                      | Tropical: remote top quarter turns sky-blue                                  | ✅                 |
+| Blur                                  | Remote edge energy with vs without blur                                      | ✅ 0.0045 → 0.0025 |
+| Everything off                        | Processor removed; remote video back to the raw camera                       | ✅                 |
+| Face tracking runs                    | Landmarker on GPU, per-frame time reported                                   | ✅                 |
+| Prop geometry                         | Unit tests: anchors, scale ∝ eye distance, roll, smoothing, particle systems | ✅ 15 tests        |
+
+**Performance** (Apple M4, Chrome 156, 1280×720 frames, after warm-up; the 20 fps is Chrome's fake-camera rate):
+
+| Look            | ms / frame | Model time           | Delegate |
+| --------------- | ---------- | -------------------- | -------- |
+| Background blur | 9.6–9.7    | segmentation 8.9–9.3 | GPU      |
+| Face filter     | 7.6–9.0    | landmarks 7.1–9.2    | GPU      |
+
+Budget for 30 fps is 33 ms: about 3× headroom on this machine.
+
+**Not automatable, stated plainly:** Chrome's fake camera contains no face, so props being _drawn on a real face_ is
+verified by unit tests (geometry) plus the manual checklist, not by E2E.
+
 ## Deployment (2026-10-31)
 
 - Live at **https://duo-virid-eta.vercel.app** (Vercel, functions in `dub1`; Supabase `eu-west-1`; LiveKit Cloud).
@@ -189,6 +230,13 @@ Pressing a _global_ shortcut can't be automated, so the test invokes the same co
 - **2026-10-31: "Disconnected" on join under `npm run dev`.** The `Room` was created once and reused across React StrictMode's
   dev double-mount, so the second `connect()` ran on a Room disconnected mid-connect. Tests only ran the production build, so they
   missed it. Fix: a fresh `Room` per effect run, exposed to the UI only after it connects. Added `npm run test:e2e:dev` so dev mode stays covered.
+
+### Bugs found while building M5 (fixed)
+
+- Quality governor reacted to start-up (shader compile, model load), lowering quality and toasting on plain B&W. It now
+  ignores warm-up frames after start, model loads and config changes.
+- MediaPipe can't run in a module worker ("ModuleFactory not set"). The worker is bundled as a classic script.
+- Worker typings leaked into the app (`lib: webworker`); the worker now has its own tsconfig.
 
 ### Bugs found while building M4 (fixed)
 

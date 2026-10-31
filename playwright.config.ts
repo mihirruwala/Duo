@@ -36,6 +36,8 @@ export default defineConfig({
             "--use-fake-device-for-media-stream",
             // Lets the audio checks run without a click gesture.
             "--autoplay-policy=no-user-gesture-required",
+            // Real GPU for WebGL/MediaPipe (headless otherwise falls back to software rendering).
+            ...(process.platform === "darwin" ? ["--use-angle=metal", "--ignore-gpu-blocklist", "--enable-gpu"] : []),
           ],
         },
       },

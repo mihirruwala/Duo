@@ -9,7 +9,7 @@ export const FEATURES = {
   screenShare: true, // M2
   chat: true, // M3
   remoteControl: true, // M4
-  studio: false, // M5
+  studio: true, // M5
 } as const;
 
 export type FeatureKey = keyof typeof FEATURES;

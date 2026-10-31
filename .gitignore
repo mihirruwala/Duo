@@ -57,3 +57,7 @@ supabase/.branches
 # extension builds
 /extension/dist/
 /extension/dist-e2e/
+
+# DUO Studio generated assets
+/public/mediapipe/
+/public/studio/

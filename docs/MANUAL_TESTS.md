@@ -86,3 +86,16 @@ Tick each box and note the Chrome version and OS.
 - [ ] After a session ends, the frame/banner/cursor disappear from the tab and the badge clears.
 - [ ] Leave a session running past the room's limit (set `control_max_seconds` to 60 in the DB) → it ends by itself on both sides.
 - [ ] Supabase → `control_sessions` shows each session with status, approval time and end reason.
+
+## M5: DUO Studio (real camera, ideally on a mid-range laptop too)
+
+- [ ] Pre-call: Filters & backgrounds → each face filter (Puppy, Kitty, Cool shades, Big eyes, Crown, Floating hearts,
+      Confetti) sits on your face, follows you as you move and tilt your head, and disappears when you leave the frame.
+- [ ] Blur: your outline is clean (hair, shoulders), the background is blurred, and the strength slider changes it live.
+- [ ] Each background scene and your own uploaded photo replace the background without flicker at the edges.
+- [ ] Each live effect looks right; VHS shows colour fringing, scanlines and rolling bands.
+- [ ] In the call, the other person sees the same look; switching looks doesn't freeze or reconnect the call.
+- [ ] `?debug=1`: the read-out stays around 30 fps with ms/frame well under 33 on your machine. Note the numbers here.
+- [ ] On an older laptop: if it struggles, you get "quality lowered", and as a last resort backgrounds/filters switch off
+      with a message; the call keeps going.
+- [ ] Turn everything off, then leave the call: the camera light goes off.

@@ -13,7 +13,16 @@ import {
   useTracks,
   type TrackReference,
 } from "@livekit/components-react";
-import { ConnectionState, DisconnectReason, Room, RoomEvent, ScreenSharePresets, Track, VideoPresets } from "livekit-client";
+import {
+  ConnectionState,
+  DisconnectReason,
+  Room,
+  RoomEvent,
+  ScreenSharePresets,
+  Track,
+  VideoPresets,
+  type LocalVideoTrack,
+} from "livekit-client";
 import { Loader2, Lock, Volume2, WifiOff } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -26,6 +35,9 @@ import { ControlProvider, useControl } from "@/features/control/control-provider
 import { ControllerBar, OwnerControlLayer } from "@/features/control/components/control-ui";
 import { InputCapture } from "@/features/control/components/input-capture";
 import { CONTROLLABLE_TRACK_NAME } from "@/shared/control";
+import { PerfBadge, StudioPanel } from "@/features/studio/components/studio-panel";
+import { useStudioTrack } from "@/features/studio/use-studio-track";
+import { isStudioActive } from "@/shared/studio";
 import { CallControls } from "./call-controls";
 import { ParticipantTile } from "./participant-tile";
 import { ScreenShareStage } from "./screen-share-stage";
@@ -169,7 +181,10 @@ export function MeetingRoom({
 
 function CallLayout({ roomName, partnerName, onLeave }: { roomName: string; partnerName: string | null; onLeave: () => void }) {
   const state = useConnectionState();
-  const { localParticipant, isMicrophoneEnabled, isCameraEnabled, isScreenShareEnabled } = useLocalParticipant();
+  const { localParticipant, isMicrophoneEnabled, isCameraEnabled, isScreenShareEnabled, cameraTrack } = useLocalParticipant();
+  const cameraVideo = cameraTrack?.track as LocalVideoTrack | undefined;
+  const studio = useStudioTrack(FEATURES.studio ? cameraVideo : undefined);
+  const [studioOpen, setStudioOpen] = useState(false);
   const remotes = useRemoteParticipants();
   const { canPlayAudio, startAudio } = useAudioPlayback();
   const [modKey] = useState<"Meta" | "Control">(() => (navigator.userAgent.includes("Mac") ? "Meta" : "Control"));
@@ -340,9 +355,13 @@ function CallLayout({ roomName, partnerName, onLeave }: { roomName: string; part
           onToggleCam={() => void toggleCam()}
           onToggleShare={() => void toggleShare()}
           onShareControllable={FEATURES.remoteControl ? control.startControllableShare : undefined}
+          onOpenStudio={FEATURES.studio ? () => setStudioOpen(true) : undefined}
+          effectsOn={isStudioActive(studio.config)}
           onLeave={onLeave}
         />
       </footer>
+      {FEATURES.studio && <StudioPanel open={studioOpen} onOpenChange={setStudioOpen} track={cameraVideo} stats={studio.stats} />}
+      <PerfBadge stats={studio.stats} className="fixed top-16 left-4 z-50" />
     </>
   );
 }

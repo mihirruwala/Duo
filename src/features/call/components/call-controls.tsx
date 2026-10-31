@@ -1,6 +1,6 @@
 "use client";
 
-import { MonitorUp, MonitorX, Mic, MicOff, MousePointerClick, PhoneOff, Video, VideoOff } from "lucide-react";
+import { MonitorUp, MonitorX, Mic, MicOff, MousePointerClick, PhoneOff, Sparkles, Video, VideoOff } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -63,6 +63,8 @@ export function CallControls({
   onToggleCam,
   onToggleShare,
   onShareControllable,
+  onOpenStudio,
+  effectsOn,
   onLeave,
 }: {
   micOn: boolean;
@@ -76,6 +78,9 @@ export function CallControls({
   onToggleShare: () => void;
   /** Present when remote control is available: share a tab through the DUO extension. */
   onShareControllable?: () => void;
+  /** Present when DUO Studio is available. */
+  onOpenStudio?: () => void;
+  effectsOn?: boolean;
   onLeave: () => void;
 }) {
   return (
@@ -141,6 +146,11 @@ export function CallControls({
             </DropdownMenuContent>
           </DropdownMenu>
         ))}
+      {onOpenStudio && (
+        <Control label="Effects" tone={effectsOn ? "accent" : "neutral"} pressed={effectsOn} onClick={onOpenStudio}>
+          <Sparkles />
+        </Control>
+      )}
       <span className="mx-1 h-8 w-px bg-white/10" aria-hidden />
       <Control label="Leave call" tone="leave" onClick={onLeave}>
         <PhoneOff />

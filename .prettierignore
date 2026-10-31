@@ -7,3 +7,5 @@ playwright-report
 test-results
 extension/dist
 extension/dist-e2e
+public/mediapipe
+public/studio

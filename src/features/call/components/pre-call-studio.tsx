@@ -8,6 +8,9 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { FEATURES } from "@/shared/features";
 import type { DevicePrefs } from "../device-prefs";
+import { StudioPanel } from "@/features/studio/components/studio-panel";
+import { useStudioTrack } from "@/features/studio/use-studio-track";
+import { studioSummary } from "@/features/studio/summary";
 import { usePreviewMedia } from "../use-preview-media";
 import { DeviceSelect } from "./device-select";
 import { LocalVideo } from "./local-video";
@@ -27,6 +30,8 @@ type Props = {
 export function PreCallStudio({ roomName, myName, myHue, partnerName, joining, joinError, onJoin, aside }: Props) {
   const media = usePreviewMedia();
   const { prefs, video, audio, devices } = media;
+  const studio = useStudioTrack(video);
+  const [studioOpen, setStudioOpen] = useState(false);
   const [testing, setTesting] = useState(false);
 
   async function playTestSound() {
@@ -130,7 +135,19 @@ export function PreCallStudio({ roomName, myName, myHue, partnerName, joining, j
             </div>
           </div>
 
-          {!FEATURES.studio && (
+          {FEATURES.studio ? (
+            <button
+              type="button"
+              onClick={() => setStudioOpen(true)}
+              data-testid="open-studio"
+              className="flex items-center justify-between rounded-2xl border border-border bg-ink-1/60 px-4 py-3 text-left transition-colors hover:bg-ink-3"
+            >
+              <span className="flex items-center gap-2 text-sm font-semibold">
+                <Sparkles className="size-4 text-mint" aria-hidden /> Filters & backgrounds
+              </span>
+              <span className="text-xs text-muted-foreground">{studioSummary(studio.config)}</span>
+            </button>
+          ) : (
             <div className="flex items-center justify-between rounded-2xl border border-border bg-ink-1/60 px-4 py-3">
               <span className="flex items-center gap-2 text-sm font-semibold">
                 <Sparkles className="size-4 text-mint" aria-hidden /> Filters & backgrounds
@@ -154,6 +171,7 @@ export function PreCallStudio({ roomName, myName, myHue, partnerName, joining, j
         </div>
         {aside}
       </section>
+      <StudioPanel open={studioOpen} onOpenChange={setStudioOpen} track={video} stats={studio.stats} />
     </div>
   );
 }
