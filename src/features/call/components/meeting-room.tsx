@@ -38,6 +38,7 @@ import { CONTROLLABLE_TRACK_NAME } from "@/shared/control";
 import { PerfBadge, StudioPanel } from "@/features/studio/components/studio-panel";
 import { useStudioTrack } from "@/features/studio/use-studio-track";
 import { isStudioActive } from "@/shared/studio";
+import { CallFunOverlay, useCallFun } from "../fun/call-fun";
 import { CallPip, pipSupported, useCallPip } from "../pip/call-pip";
 import { CallControls } from "./call-controls";
 import { ParticipantTile } from "./participant-tile";
@@ -192,6 +193,7 @@ function CallLayout({ roomName, partnerName, onLeave }: { roomName: string; part
   const partnerLeft = usePartnerLeft();
   const control = useControl();
   const pip = useCallPip();
+  const fun = useCallFun();
 
   const tracks = useTracks(
     [
@@ -380,10 +382,13 @@ function CallLayout({ roomName, partnerName, onLeave }: { roomName: string; part
           }
           onOpenStudio={FEATURES.studio ? () => setStudioOpen(true) : undefined}
           effectsOn={isStudioActive(studio.config)}
+          onReact={fun.react}
+          onPhotoBooth={fun.canBooth ? fun.startBooth : undefined}
           onLeave={onLeave}
         />
       </footer>
       <CallPip pipWindow={pip.pipWindow} />
+      <CallFunOverlay fun={fun} />
       {FEATURES.studio && <StudioPanel open={studioOpen} onOpenChange={setStudioOpen} track={cameraVideo} stats={studio.stats} />}
       <PerfBadge stats={studio.stats} className="fixed top-16 left-4 z-50" />
     </>

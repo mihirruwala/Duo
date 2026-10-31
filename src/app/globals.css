@@ -139,6 +139,20 @@
       transform: translateY(-10px) rotate(2deg);
     }
   }
+  @keyframes duo-rise {
+    0% {
+      transform: translateY(0) scale(0.6);
+      opacity: 0;
+    }
+    12% {
+      transform: translateY(-4vh) scale(1.1);
+      opacity: 1;
+    }
+    100% {
+      transform: translateY(-55vh) scale(1);
+      opacity: 0;
+    }
+  }
   @keyframes duo-pulse-ring {
     0% {
       box-shadow: 0 0 0 0 oklch(0.74 0.165 30 / 45%);

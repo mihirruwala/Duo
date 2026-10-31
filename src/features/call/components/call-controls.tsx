@@ -1,6 +1,20 @@
 "use client";
 
-import { MonitorUp, MonitorX, Mic, MicOff, MousePointerClick, PhoneOff, Sparkles, Video, VideoOff } from "lucide-react";
+import {
+  Camera,
+  MonitorUp,
+  MonitorX,
+  Mic,
+  MicOff,
+  MousePointerClick,
+  PhoneOff,
+  SmilePlus,
+  Sparkles,
+  Video,
+  VideoOff,
+} from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { CALL_REACTIONS } from "@/shared/fun";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -65,6 +79,8 @@ export function CallControls({
   onShareControllable,
   onOpenStudio,
   effectsOn,
+  onReact,
+  onPhotoBooth,
   onLeave,
 }: {
   micOn: boolean;
@@ -81,6 +97,8 @@ export function CallControls({
   /** Present when DUO Studio is available. */
   onOpenStudio?: () => void;
   effectsOn?: boolean;
+  onReact?: (emoji: (typeof CALL_REACTIONS)[number]) => void;
+  onPhotoBooth?: () => void;
   onLeave: () => void;
 }) {
   return (
@@ -149,6 +167,34 @@ export function CallControls({
       {onOpenStudio && (
         <Control label="Effects" tone={effectsOn ? "accent" : "neutral"} pressed={effectsOn} onClick={onOpenStudio}>
           <Sparkles />
+        </Control>
+      )}
+      {onReact && (
+        <Popover>
+          <PopoverTrigger
+            aria-label="Send a reaction"
+            className="grid size-12 place-items-center rounded-2xl bg-ink-3 text-foreground transition-colors hover:bg-ink-4 [&_svg]:size-5"
+          >
+            <SmilePlus />
+          </PopoverTrigger>
+          <PopoverContent side="top" className="flex w-auto gap-1 rounded-2xl p-1.5">
+            {CALL_REACTIONS.map((e) => (
+              <button
+                key={e}
+                type="button"
+                onClick={() => onReact(e)}
+                aria-label={`React ${e}`}
+                className="grid size-11 place-items-center rounded-xl text-2xl transition-transform hover:scale-125 hover:bg-ink-3"
+              >
+                {e}
+              </button>
+            ))}
+          </PopoverContent>
+        </Popover>
+      )}
+      {onPhotoBooth && (
+        <Control label="Photo booth" tone="neutral" onClick={onPhotoBooth}>
+          <Camera />
         </Control>
       )}
       <span className="mx-1 h-8 w-px bg-white/10" aria-hidden />

@@ -38,6 +38,8 @@ type ChatApi = {
   sendGif: (gif: Gif, replyTo: string | null) => void;
   sendSticker: (id: StickerId, replyTo: string | null) => void;
   sendFiles: (files: File[], replyTo: string | null) => string | null;
+  /** Send one image and resolve with its message id once stored (null on failure). Optionally save it to Moments. */
+  sendPhoto: (file: File, opts?: { saveToMoments?: boolean }) => Promise<string | null>;
   retry: (id: string) => void;
   edit: (id: string, body: string) => Promise<string | null>;
   remove: (id: string) => Promise<string | null>;
@@ -465,8 +467,10 @@ export function ChatProvider({
         if (error || !data) throw new Error(friendlyError(error, "Upload failed. Tap to retry."));
         dispatch({ type: "message", row: data });
         pendingFiles.current.delete(msg.id);
+        return true;
       } catch (err) {
         dispatch({ type: "failed", id: msg.id, error: (err as Error).message || "Upload failed. Tap to retry." });
+        return false;
       }
     },
     [roomId, slug],
@@ -492,6 +496,28 @@ export function ChatProvider({
         void runUpload(msg, file);
       }
       return files.length > 10 ? "Only the first 10 files were sent." : null;
+    },
+    [roomId, me.id, runUpload],
+  );
+
+  const sendPhoto = useCallback(
+    async (file: File, opts: { saveToMoments?: boolean } = {}) => {
+      if (validateFile(file)) return null;
+      const msg = makeOptimistic(roomId, me.id, "image", null, null, {
+        file_name: file.name,
+        mime_type: file.type,
+        size_bytes: file.size,
+      });
+      msg.progress = 0;
+      msg.localPreview = URL.createObjectURL(file);
+      pendingFiles.current.set(msg.id, { file, replyTo: null });
+      dispatch({ type: "optimistic", message: msg });
+      if (!(await runUpload(msg, file))) return null;
+      if (opts.saveToMoments) {
+        const { data } = await supabase().from("moments").insert({ message_id: msg.id }).select("*").single();
+        if (data) dispatch({ type: "moment", op: "add", row: data });
+      }
+      return msg.id;
     },
     [roomId, me.id, runUpload],
   );
@@ -613,6 +639,7 @@ export function ChatProvider({
     sendGif,
     sendSticker,
     sendFiles,
+    sendPhoto,
     retry,
     edit,
     remove,
