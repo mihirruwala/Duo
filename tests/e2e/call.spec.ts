@@ -1,5 +1,5 @@
 import { expect, hasBackend, test } from "./fixtures";
-import { createJoinedRoom, expectVideoPlaying, newUserPage } from "./helpers";
+import { createJoinedRoom, expectVideoPlaying, newUserPage, remoteAudioPeak } from "./helpers";
 
 const hasLivekit = Boolean(process.env.NEXT_PUBLIC_LIVEKIT_URL && process.env.LIVEKIT_API_KEY && process.env.LIVEKIT_API_SECRET);
 
@@ -33,16 +33,32 @@ test("two people see and hear each other, share a screen, and leave cleanly", as
   await expect(host.getByTestId("tile-remote")).toContainText("Gabe");
   await expect(guest.getByTestId("tile-remote")).toContainText("Hana");
 
-  // …and hear each other: the fake mic's tone makes the remote tile light up as speaking.
-  await expect(host.locator('[data-testid="tile-remote"][data-speaking]')).toBeVisible({ timeout: 20_000 });
-  await expect(guest.locator('[data-testid="tile-remote"][data-speaking]')).toBeVisible({ timeout: 20_000 });
+  // …and hear each other: decoded remote audio carries real signal on both sides.
   await expect(guest.locator("audio")).toHaveCount(1);
+  await expect(host.locator("audio")).toHaveCount(1);
+  await expect.poll(() => remoteAudioPeak(host), { timeout: 20_000 }).toBeGreaterThan(0.01);
+  await expect.poll(() => remoteAudioPeak(guest), { timeout: 20_000 }).toBeGreaterThan(0.01);
 
   // Mute is reflected on the other side.
   await host.getByRole("button", { name: "Mute" }).click();
   await expect(guest.getByTestId("tile-remote").getByLabel("Microphone off")).toBeVisible();
   await host.getByRole("button", { name: "Unmute" }).click();
   await expect(guest.getByTestId("tile-remote").getByLabel("Microphone off")).toHaveCount(0);
+
+  // Live device switching mid-call: pick another microphone; the other side keeps hearing.
+  await host.getByRole("button", { name: "Choose microphone and speaker" }).click();
+  const mics = host.getByRole("menuitem");
+  await expect(mics.first()).toBeVisible();
+  expect(await mics.count()).toBeGreaterThan(1);
+  await mics.nth(1).click();
+  await expect.poll(() => remoteAudioPeak(guest), { timeout: 20_000 }).toBeGreaterThan(0.01);
+
+  // Network drop: the guest shows "Reconnecting…", then recovers by itself with video intact.
+  await guest.context().setOffline(true);
+  await expect(guest.getByTestId("connection-state")).toContainText("Reconnecting", { timeout: 20_000 });
+  await guest.context().setOffline(false);
+  await expect(guest.getByTestId("connection-state")).toContainText("Connected", { timeout: 30_000 });
+  await expectVideoPlaying(guest, '[data-testid="tile-remote"]');
 
   // Screen share appears live on the other side.
   await host.getByRole("button", { name: "Share screen" }).click();

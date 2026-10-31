@@ -3,6 +3,7 @@
 import { MonitorUp, MonitorX, Mic, MicOff, PhoneOff, Video, VideoOff } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { DeviceMenu } from "./device-menu";
 
 type Tone = "neutral" | "off" | "accent" | "leave";
 
@@ -75,17 +76,28 @@ export function CallControls({
 }) {
   return (
     <nav aria-label="Call controls" className="glass flex items-center gap-2 rounded-3xl p-2 shadow-2xl">
-      <Control label={micOn ? "Mute" : "Unmute"} shortcut={`${modKey}+D`} tone={micOn ? "neutral" : "off"} onClick={onToggleMic}>
-        {micOn ? <Mic /> : <MicOff />}
-      </Control>
-      <Control
-        label={camOn ? "Turn camera off" : "Turn camera on"}
-        shortcut={`${modKey}+E`}
-        tone={camOn ? "neutral" : "off"}
-        onClick={onToggleCam}
-      >
-        {camOn ? <Video /> : <VideoOff />}
-      </Control>
+      <span className="flex items-center">
+        <Control
+          label={micOn ? "Mute" : "Unmute"}
+          shortcut={`${modKey}+D`}
+          tone={micOn ? "neutral" : "off"}
+          onClick={onToggleMic}
+        >
+          {micOn ? <Mic /> : <MicOff />}
+        </Control>
+        <DeviceMenu kind="audio" />
+      </span>
+      <span className="flex items-center">
+        <Control
+          label={camOn ? "Turn camera off" : "Turn camera on"}
+          shortcut={`${modKey}+E`}
+          tone={camOn ? "neutral" : "off"}
+          onClick={onToggleCam}
+        >
+          {camOn ? <Video /> : <VideoOff />}
+        </Control>
+        <DeviceMenu kind="video" />
+      </span>
       {canShare && (
         <Control
           label={shareBlockedBy ? `${shareBlockedBy} is sharing` : sharing ? "Stop sharing" : "Share screen"}

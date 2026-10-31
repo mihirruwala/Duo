@@ -29,7 +29,12 @@ export default defineConfig({
         ...devices["Desktop Chrome"],
         channel: process.env.E2E_CHANNEL ?? "chrome",
         launchOptions: {
-          args: ["--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream"],
+          args: [
+            "--use-fake-ui-for-media-stream",
+            "--use-fake-device-for-media-stream",
+            // Lets the audio checks run without a click gesture.
+            "--autoplay-policy=no-user-gesture-required",
+          ],
         },
       },
     },
