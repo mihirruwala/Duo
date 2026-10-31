@@ -23,8 +23,8 @@ npm run dev                     # http://localhost:3000
 ### 1. Supabase (required)
 
 1. Create a free project at [supabase.com](https://supabase.com/dashboard).
-2. **Project Settings → API Keys**: copy the *Publishable key* and create a *Secret key*. Put them in `.env.local`
-   along with the *Project URL* (Project Settings → Data API).
+2. **Project Settings → API Keys**: copy the _Publishable key_ and create a _Secret key_. Put them in `.env.local`
+   along with the _Project URL_ (Project Settings → Data API).
 3. **Authentication → Sign In / Providers → Email**: keep Email enabled. For local development and the e2e suite,
    turn **"Confirm email" off** (otherwise each sign-up waits for an email link).
 4. **Authentication → URL Configuration**: Site URL `http://localhost:3000`; add `http://localhost:3000/**` to
@@ -43,22 +43,22 @@ npm run dev                     # http://localhost:3000
 
 ## Scripts
 
-| Script | What it does |
-|---|---|
-| `npm run dev` | Dev server |
-| `npm run build` / `npm start` | Production build / serve |
-| `npm run check` | Typecheck + lint + unit/RLS tests |
-| `npm test` | Vitest: unit tests and **RLS tests** (real migrations in PGlite, no backend needed) |
-| `npm run test:e2e` | Playwright against a production build in Chrome. Backend specs auto-skip without Supabase env |
-| `npm run format` | Prettier |
-| `npm run db:push` | Apply migrations to the linked Supabase project |
-| `npm run db:types` | Regenerate DB types from the linked project |
+| Script                        | What it does                                                                                  |
+| ----------------------------- | --------------------------------------------------------------------------------------------- |
+| `npm run dev`                 | Dev server                                                                                    |
+| `npm run build` / `npm start` | Production build / serve                                                                      |
+| `npm run check`               | Typecheck + lint + unit/RLS tests                                                             |
+| `npm test`                    | Vitest: unit tests and **RLS tests** (real migrations in PGlite, no backend needed)           |
+| `npm run test:e2e`            | Playwright against a production build in Chrome. Backend specs auto-skip without Supabase env |
+| `npm run format`              | Prettier                                                                                      |
+| `npm run db:push`             | Apply migrations to the linked Supabase project                                               |
+| `npm run db:types`            | Regenerate DB types from the linked project                                                   |
 
 ## Testing
 
 - **RLS / database:** `npm test` boots Postgres-in-WASM (PGlite), emulates Supabase's roles, `auth.uid()` and its
   permissive default grants, then runs every migration and asserts outsiders can't read or write anything.
-- **E2E:** `npm run test:e2e`. The two-user room test needs Supabase configured with *Confirm email* off. It
+- **E2E:** `npm run test:e2e`. The two-user room test needs Supabase configured with _Confirm email_ off. It
   creates throwaway users named `duo-e2e-*@example.com`.
 
 ## Project layout
