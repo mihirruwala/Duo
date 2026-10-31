@@ -80,6 +80,12 @@ _Last updated: 2026-10-31_
 Test doubles, stated plainly: Chrome's fake camera/mic, and a canvas stream in place of `getDisplayMedia` (the real OS
 picker can't be clicked in automation). Real devices and real screen capture are in `docs/MANUAL_TESTS.md`. **Not yet run by a human.**
 
+## Bugs found in user testing
+
+- **2026-10-31: "Disconnected" on join under `npm run dev`.** The `Room` was created once and reused across React StrictMode's
+  dev double-mount, so the second `connect()` ran on a Room disconnected mid-connect. Tests only ran the production build, so they
+  missed it. Fix: a fresh `Room` per effect run, exposed to the UI only after it connects. Added `npm run test:e2e:dev` so dev mode stays covered.
+
 ## Known issues / decisions
 
 - No Docker on the dev machine, so local Supabase is unavailable. Using hosted Supabase for dev (see ARCHITECTURE §6).

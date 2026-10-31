@@ -83,8 +83,9 @@ export function MeetingRoom({
   partnerName: string | null;
   onLeave: (reason: LeaveReason) => void;
 }) {
-  const [room] = useState(createRoom);
-  const [connected, setConnected] = useState(false);
+  // The connected Room. A fresh Room is created per effect run: React StrictMode (dev) mounts
+  // twice, and a Room that was disconnected mid-connect must never be reused.
+  const [room, setRoom] = useState<Room | null>(null);
 
   const handleDisconnect = useEffectEvent((reason?: DisconnectReason) => {
     if (reason === DisconnectReason.CLIENT_INITIATED) return;
@@ -94,22 +95,23 @@ export function MeetingRoom({
 
   useEffect(() => {
     let cancelled = false;
+    const current = createRoom();
     const onDisconnected = (reason?: DisconnectReason) => {
       if (!cancelled) handleDisconnect(reason);
     };
-    room.on(RoomEvent.Disconnected, onDisconnected);
+    current.on(RoomEvent.Disconnected, onDisconnected);
 
     void (async () => {
       try {
-        await room.connect(connection.url, connection.token);
+        await current.connect(connection.url, connection.token);
       } catch {
         if (!cancelled) handleFailure("Couldn't reach the call server. Check your connection and try again.");
         return;
       }
       if (cancelled) return;
-      setConnected(true);
-      if (prefs.speakerId) await room.switchActiveDevice("audiooutput", prefs.speakerId).catch(() => false);
-      const lp = room.localParticipant;
+      setRoom(current);
+      if (prefs.speakerId) await current.switchActiveDevice("audiooutput", prefs.speakerId).catch(() => false);
+      const lp = current.localParticipant;
       const results = await Promise.allSettled([
         prefs.micOn
           ? enableWithFallback((deviceId) => lp.setMicrophoneEnabled(true, { deviceId, ...AUDIO_OPTS }), prefs.micId)
@@ -126,32 +128,33 @@ export function MeetingRoom({
 
     return () => {
       cancelled = true;
-      room.off(RoomEvent.Disconnected, onDisconnected);
+      current.off(RoomEvent.Disconnected, onDisconnected);
       // Stops every local track, so the camera light goes off on unmount.
-      void room.disconnect(true);
+      void current.disconnect(true);
+      setRoom((r) => (r === current ? null : r));
     };
-  }, [room, connection, prefs]);
+  }, [connection, prefs]);
 
   async function leave() {
-    await room.disconnect(true);
+    await room?.disconnect(true);
     onLeave({ kind: "left" });
   }
 
   return (
-    <RoomContext.Provider value={room}>
-      <div className="fixed inset-0 z-40 flex flex-col bg-background" data-testid="meeting-room">
-        {connected ? (
+    <div className="fixed inset-0 z-40 flex flex-col bg-background" data-testid="meeting-room">
+      {room ? (
+        <RoomContext.Provider value={room}>
           <CallLayout roomName={roomName} partnerName={partnerName} onLeave={leave} />
-        ) : (
-          <div className="grid flex-1 place-items-center" role="status">
-            <span className="flex items-center gap-3 text-lg font-semibold">
-              <Loader2 className="size-5 animate-spin text-coral" /> Joining {roomName}…
-            </span>
-          </div>
-        )}
-        <RoomAudioRenderer />
-      </div>
-    </RoomContext.Provider>
+          <RoomAudioRenderer />
+        </RoomContext.Provider>
+      ) : (
+        <div className="grid flex-1 place-items-center" role="status">
+          <span className="flex items-center gap-3 text-lg font-semibold">
+            <Loader2 className="size-5 animate-spin text-coral" /> Joining {roomName}…
+          </span>
+        </div>
+      )}
+    </div>
   );
 }
 

@@ -40,7 +40,8 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `npm run build && npm run start -- -p ${PORT}`,
+    // E2E_DEV=1 runs against `next dev` (React StrictMode double-mounts), which is how people develop locally.
+    command: process.env.E2E_DEV ? `npx next dev -p ${PORT}` : `npm run build && npm run start -- -p ${PORT}`,
     url: `http://localhost:${PORT}`,
     reuseExistingServer: !process.env.CI,
     timeout: 240_000,
