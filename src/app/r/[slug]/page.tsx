@@ -7,6 +7,7 @@ import { DuoAvatar } from "@/components/duo/avatar";
 import { SetupRequired } from "@/components/duo/setup-required";
 import { Button } from "@/components/ui/button";
 import { RoomExperience } from "@/features/call/components/room-experience";
+import { E2eeSetting } from "@/features/rooms/components/e2ee-toggle";
 import { NewInviteButton } from "@/features/rooms/components/new-invite-button";
 import { RoomMembershipActions } from "@/features/rooms/components/room-membership-actions";
 import { getMyProfile, getRoomBySlug, type RoomMember, type RoomWithMembers } from "@/features/rooms/server/queries";
@@ -73,6 +74,7 @@ function RoomDetails({ room, me, partner }: { room: RoomWithMembers; me: RoomMem
           <NewInviteButton roomId={room.id} />
         </div>
       )}
+      <E2eeSetting roomId={room.id} enabled={room.e2ee_enabled} isHost={me.role === "host"} />
       <RoomMembershipActions roomId={room.id} slug={room.slug} role={me.role} />
     </div>
   );

@@ -21,6 +21,10 @@ for (const f of readdirSync(wasmSrc)) {
   copyFileSync(join(wasmSrc, f), join(wasmOut, f));
 }
 
+// LiveKit's end-to-end encryption worker (classic script), self-hosted for the same CSP reason.
+mkdirSync(join(root, "public/livekit"), { recursive: true });
+copyFileSync(join(root, "node_modules/livekit-client/dist/livekit-client.e2ee.worker.js"), join(root, "public/livekit/e2ee-worker.js"));
+
 await build({
   entryPoints: [join(root, "src/features/studio/worker/studio.worker.ts")],
   outfile: join(root, "public/studio/worker.js"),
@@ -32,4 +36,4 @@ await build({
   legalComments: "none",
   logLevel: "warning",
 });
-console.log("DUO Studio assets ready (public/mediapipe, public/studio/worker.js)");
+console.log("DUO assets ready (public/mediapipe, public/studio/worker.js, public/livekit/e2ee-worker.js)");

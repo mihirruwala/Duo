@@ -207,6 +207,29 @@ Budget for 30 fps is 33 ms: about 3× headroom on this machine.
 **Not automatable, stated plainly:** Chrome's fake camera contains no face, so props being _drawn on a real face_ is
 verified by unit tests (geometry) plus the manual checklist, not by E2E.
 
+## Roadmap items 2–5 (2026-11-01)
+
+| Item                  | What shipped                                                                                                                                                                                               | Verified by                                                                               |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Knock & presence      | Home/room/in-call presence on the private room channel; Home cards with live status + Join; pre-call banner with Join now / Knock; chime + system notification when DUO isn't in front (opt-in, throttled) | `presence.spec.ts`: arrival, knock (toast + notification), call start, Home → room → join |
+| Picture-in-picture    | Document PiP opens with the "share a tab they can control" click (or Pop out): their camera, control status + countdown, Revoke / Approve / Deny, mic + camera                                             | `control.spec.ts`: PiP opens automatically, approve and revoke from it                    |
+| Profile settings      | `/settings`: name, colour, alert prefs, sign out, delete account (password re-auth, storage cleanup)                                                                                                       | `settings.spec.ts` against real storage                                                   |
+| In-call fun           | Floating emoji reactions; photo booth (shared countdown, either can cancel) → chat + Moments                                                                                                               | `fun.spec.ts`                                                                             |
+| M6: phones            | Call controls collapse into a More menu; chat launcher above the bar                                                                                                                                       | Screenshot at 390 px; controls within 52–337 px                                           |
+| M6: errors            | `error.tsx` (retry), `global-error.tsx`, branded 404                                                                                                                                                       | n/a                                                                                       |
+| M6: accessibility     | axe WCAG 2.1 AA, 0 serious/critical on 9 screens; keyboard-only join + mute; visible focus                                                                                                                 | `hardening.spec.ts`                                                                       |
+| M6: XSS               | Markup in messages, links, display names inert                                                                                                                                                             | `hardening.spec.ts`                                                                       |
+| M6: storage cleanup   | Room + account deletion remove files (Storage API)                                                                                                                                                         | `settings.spec.ts`                                                                        |
+| M6: E2EE              | LiveKit E2EE on by default, per-room key (members-only, rotates on allowlist change), header badge, host toggle                                                                                            | `call.spec.ts` (badge both sides, A/V through E2EE; E2EE-off variant), 2 PGlite tests     |
+| M6: security write-up | `docs/SECURITY.md`                                                                                                                                                                                         | n/a                                                                                       |
+
+### Bugs found and fixed in this round
+
+- The E2EE badge crashed the call before the other person joined (LiveKit's `useIsEncrypted` throws without a participant).
+- Call controls overflowed off-screen on phones and the chat launcher covered them.
+- axe: decorative logo SVGs announced as unnamed images; link/button names didn't include visible text; unnamed slider
+  thumbs; `aria-label` on a role-less span.
+
 ## Deployment (2026-10-31)
 
 - Live at **https://duo-virid-eta.vercel.app** (Vercel, functions in `dub1`; Supabase `eu-west-1`; LiveKit Cloud).
@@ -258,10 +281,11 @@ verified by unit tests (geometry) plus the manual checklist, not by E2E.
 - No Docker on the dev machine, so local Supabase is unavailable. Using hosted Supabase for dev (see ARCHITECTURE §6).
 - Dev uses **LiveKit Cloud**. `npm run livekit` (native server via Homebrew's verified bottle) exists but was not run here;
   the tool sandbox blocked executing a downloaded binary.
-- Transport is DTLS-SRTP encrypted, but LiveKit's SFU can see media. This is **not end-to-end encryption**. E2EE is an M6 stretch goal.
+- Calls are end-to-end encrypted against the media server (LiveKit) by default. The key lives in Supabase, so this doesn't
+  protect against DUO's own backend; chat isn't end-to-end encrypted. See docs/SECURITY.md.
 - `cacheComponents` disabled on purpose (nonce CSP). `style-src 'unsafe-inline'` kept for Radix/LiveKit inline styles.
-- Deleting a room cascades all rows, but its **storage objects are not yet removed** (they stay private, since the
-  folder's room no longer exists so no one passes RLS). Cleanup job is planned for M6.
+- Room and account deletion now remove stored files. Files orphaned _before_ this fix (from earlier deletions) are
+  still in the bucket, private and unreachable.
 - Upload type checks use the declared MIME type (bucket + route + client), not content sniffing. Files are served from
   the Supabase storage domain, never DUO's origin, and SVG/HTML are refused, so this can't become XSS on DUO.
 - Several files sent at once are placed in the order their uploads finish. Text/GIF/sticker order is strict.

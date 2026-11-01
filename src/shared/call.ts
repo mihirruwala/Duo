@@ -3,6 +3,11 @@ import { z } from "zod";
 export const callTokenResponseSchema = z.object({
   token: z.string().min(20),
   url: z.string().regex(/^wss?:\/\//),
+  /** Room media key (base64, 32 bytes) when end-to-end encryption is on; never sent to LiveKit. */
+  e2eeKey: z
+    .string()
+    .regex(/^[A-Za-z0-9+/]{43}=$/)
+    .nullable(),
 });
 export type CallTokenResponse = z.infer<typeof callTokenResponseSchema>;
 

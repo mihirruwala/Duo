@@ -29,6 +29,7 @@ export type RoomRow = {
   has_open_invite: boolean;
   control_max_seconds: number;
   created_at: string;
+  e2ee_enabled: boolean;
 };
 
 export type RoomMemberRow = { room_id: string; user_id: string; role: MemberRole; joined_at: string };
@@ -84,7 +85,11 @@ export type Database = {
   public: {
     Tables: {
       profiles: Table<ProfileRow, never, Partial<Pick<ProfileRow, "display_name" | "avatar_hue">>>;
-      rooms: Table<RoomRow, never, Partial<Pick<RoomRow, "name" | "control_max_seconds">>>;
+      rooms: Table<
+        RoomRow & { media_key?: string },
+        never,
+        Partial<Pick<RoomRow, "name" | "control_max_seconds" | "e2ee_enabled">>
+      >;
       room_members: Table<RoomMemberRow, never, never>;
       messages: Table<
         MessageRow,

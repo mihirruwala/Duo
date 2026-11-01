@@ -7,7 +7,7 @@ type Client = SupabaseClient<Database>;
 export type RoomMember = { userId: string; role: MemberRole; displayName: string; avatarHue: number };
 export type RoomWithMembers = RoomRow & { members: RoomMember[] };
 
-const ROOM_COLUMNS = "id, slug, name, host_id, invite_expires_at, has_open_invite, control_max_seconds, created_at";
+const ROOM_COLUMNS = "id, slug, name, host_id, invite_expires_at, has_open_invite, control_max_seconds, created_at, e2ee_enabled";
 
 async function attachMembers(supabase: Client, rooms: RoomRow[]): Promise<RoomWithMembers[]> {
   if (rooms.length === 0) return [];

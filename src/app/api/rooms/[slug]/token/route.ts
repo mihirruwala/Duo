@@ -65,6 +65,14 @@ export async function POST(request: NextRequest, ctx: RouteContext<"/api/rooms/[
     canPublishSources: [TrackSource.CAMERA, TrackSource.MICROPHONE, TrackSource.SCREEN_SHARE, TrackSource.SCREEN_SHARE_AUDIO],
   });
 
-  log.info("livekit.token.issued", { room_id: room.id, user_id: user.id });
-  return apiOk<CallTokenResponse>({ token: await at.toJwt(), url: env.NEXT_PUBLIC_LIVEKIT_URL });
+  // The media key comes from the database under the member's own session (RLS), never from LiveKit.
+  let e2eeKey: string | null = null;
+  if (room.e2ee_enabled) {
+    const { data } = await supabase.from("rooms").select("media_key").eq("id", room.id).single();
+    e2eeKey = data?.media_key ?? null;
+    if (!e2eeKey) return apiError(500, "e2ee_unavailable", "Couldn't set up encryption for this call.");
+  }
+
+  log.info("livekit.token.issued", { room_id: room.id, user_id: user.id, e2ee: room.e2ee_enabled });
+  return apiOk<CallTokenResponse>({ token: await at.toJwt(), url: env.NEXT_PUBLIC_LIVEKIT_URL, e2eeKey });
 }

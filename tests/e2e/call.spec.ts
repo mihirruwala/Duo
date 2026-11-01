@@ -24,13 +24,17 @@ test("two people see and hear each other, share a screen, and leave cleanly", as
       .poll(() => page.getByTestId("mic-level").getAttribute("data-level").then(Number), { timeout: 15_000 })
       .toBeGreaterThan(0);
     await page.getByRole("button", { name: "Join call" }).click();
-    await expect(page.getByTestId("meeting-room")).toBeVisible();
+    await expect(page.getByTestId("meeting-room")).toBeVisible({ timeout: 20_000 });
   }
 
   // Both see each other's video…
   await expectVideoPlaying(host, '[data-testid="tile-remote"]');
   await expectVideoPlaying(guest, '[data-testid="tile-remote"]');
   await expect(host.getByTestId("tile-remote")).toContainText("Gabe");
+  // End-to-end encryption is on by default: LiveKit reports both participants' media as encrypted,
+  // and the frames above decoded through it (only the two browsers hold the key).
+  await expect(host.getByTestId("e2ee-badge")).toBeVisible({ timeout: 15_000 });
+  await expect(guest.getByTestId("e2ee-badge")).toBeVisible({ timeout: 15_000 });
   await expect(guest.getByTestId("tile-remote")).toContainText("Hana");
 
   // …and hear each other: decoded remote audio carries real signal on both sides.
@@ -143,4 +147,45 @@ test("media tokens are only issued to room members", async ({ browser, playwrigh
     headers: { "sec-fetch-site": "cross-site", origin: "https://evil.example" },
   });
   expect(csrf.status()).toBe(403);
+});
+
+test("with end-to-end encryption turned off, calls still work and the badge is gone", async ({ browser }) => {
+  test.setTimeout(120_000);
+  const host = await newUserPage(browser, "Hana");
+  const guest = await newUserPage(browser, "Gabe");
+  const { roomUrl } = await createJoinedRoom(host, guest, "No E2EE");
+  await host.goto(roomUrl);
+  await host.getByRole("switch", { name: "End-to-end encrypted calls" }).click();
+  await expect(host.getByText("the media server can see them")).toBeVisible();
+  await guest.goto(roomUrl);
+  for (const page of [host, guest]) {
+    await page.getByRole("button", { name: "Join call" }).click();
+    await expect(page.getByTestId("meeting-room")).toBeVisible({ timeout: 20_000 });
+  }
+  await expectVideoPlaying(guest, '[data-testid="tile-remote"]');
+  await expect(guest.getByTestId("e2ee-badge")).toHaveCount(0);
+});
+
+test("a long network outage (server drops the session) recovers by itself: both see each other again", async ({ browser }) => {
+  test.setTimeout(180_000);
+  const host = await newUserPage(browser, "Hana");
+  const guest = await newUserPage(browser, "Gabe");
+  const { roomUrl } = await createJoinedRoom(host, guest, "Outage test");
+  await host.goto(roomUrl);
+  for (const page of [host, guest]) {
+    await page.getByRole("button", { name: "Join call" }).click();
+    await expect(page.getByTestId("meeting-room")).toBeVisible({ timeout: 20_000 });
+  }
+  await expectVideoPlaying(guest, '[data-testid="tile-remote"]');
+
+  // Longer than the room's 20 s departure timeout: LiveKit removes Gabe, so resuming is impossible.
+  await guest.context().setOffline(true);
+  await guest.waitForTimeout(25_000);
+  await guest.context().setOffline(false);
+
+  await expect(guest.getByTestId("connection-state")).toContainText("Connected", { timeout: 45_000 });
+  await expectVideoPlaying(guest, '[data-testid="tile-remote"]');
+  await expectVideoPlaying(host, '[data-testid="tile-remote"]');
+  await expect.poll(() => remoteAudioPeak(guest), { timeout: 20_000 }).toBeGreaterThan(0.01);
+  await expect(guest.getByTestId("e2ee-badge")).toBeVisible({ timeout: 15_000 });
 });

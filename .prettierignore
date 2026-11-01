@@ -9,3 +9,4 @@ extension/dist
 extension/dist-e2e
 public/mediapipe
 public/studio
+public/livekit

@@ -9,6 +9,7 @@ import {
   useConnectionState,
   useLocalParticipant,
   useRemoteParticipants,
+  useIsEncrypted,
   useRoomContext,
   useTracks,
   type TrackReference,
@@ -21,9 +22,11 @@ import {
   ScreenSharePresets,
   Track,
   VideoPresets,
+  ExternalE2EEKeyProvider,
   type LocalVideoTrack,
+  type RemoteParticipant,
 } from "livekit-client";
-import { Loader2, Lock, PictureInPicture2, Volume2, WifiOff } from "lucide-react";
+import { Loader2, Lock, PictureInPicture2, ShieldCheck, Volume2, WifiOff } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -48,8 +51,10 @@ export type LeaveReason = { kind: "left" } | { kind: "duplicate" } | { kind: "re
 
 const AUDIO_OPTS = { echoCancellation: true, noiseSuppression: true, autoGainControl: true };
 
-function createRoom() {
+/** With a media key, audio/video are encrypted in the browser; LiveKit only relays ciphertext. */
+function createRoom(e2ee: { keyProvider: ExternalE2EEKeyProvider; worker: Worker } | null) {
   return new Room({
+    ...(e2ee ? { e2ee } : {}),
     adaptiveStream: true,
     dynacast: true,
     stopLocalTrackOnUnpublish: true,
@@ -95,6 +100,8 @@ export function MeetingRoom({
   roomName,
   partnerName,
   onLeave,
+  onRejoinNeeded,
+  rejoining = false,
 }: {
   roomId: string;
   connection: CallTokenResponse;
@@ -102,6 +109,13 @@ export function MeetingRoom({
   roomName: string;
   partnerName: string | null;
   onLeave: (reason: LeaveReason) => void;
+  /**
+   * The connection can't be trusted any more (LiveKit fell back to a full rejoin under a new
+   * participant id, which can drop the other person's tracks, or it disconnected unexpectedly).
+   * The parent fetches a fresh token and remounts us with a brand-new Room.
+   */
+  onRejoinNeeded: () => void;
+  rejoining?: boolean;
 }) {
   // The connected Room. A fresh Room is created per effect run: React StrictMode (dev) mounts
   // twice, and a Room that was disconnected mid-connect must never be reused.
@@ -109,13 +123,21 @@ export function MeetingRoom({
 
   const handleDisconnect = useEffectEvent((reason?: DisconnectReason) => {
     if (reason === DisconnectReason.CLIENT_INITIATED) return;
-    onLeave(reasonFor(reason));
+    const r = reasonFor(reason);
+    // Network trouble is recoverable: try a clean rejoin before giving up.
+    if (r.kind === "failed") onRejoinNeeded();
+    else onLeave(r);
   });
+  const handleFullReconnect = useEffectEvent(() => onRejoinNeeded());
   const handleFailure = useEffectEvent((message: string) => onLeave({ kind: "failed", message }));
 
   useEffect(() => {
     let cancelled = false;
-    const current = createRoom();
+    let e2ee: { keyProvider: ExternalE2EEKeyProvider; worker: Worker } | null = null;
+    if (connection.e2eeKey) {
+      e2ee = { keyProvider: new ExternalE2EEKeyProvider(), worker: new Worker("/livekit/e2ee-worker.js", { name: "duo-e2ee" }) };
+    }
+    const current = createRoom(e2ee);
     const onDisconnected = (reason?: DisconnectReason) => {
       if (!cancelled) handleDisconnect(reason);
     };
@@ -123,6 +145,14 @@ export function MeetingRoom({
 
     void (async () => {
       try {
+        if (e2ee && connection.e2eeKey) {
+          // Random 32-byte key → HKDF inside LiveKit's worker.
+          await e2ee.keyProvider.setKey(Uint8Array.from(atob(connection.e2eeKey), (ch) => ch.charCodeAt(0)).buffer);
+          await current.setE2EEEnabled(true);
+        }
+        // The awaits above give React time to unmount us (StrictMode, or a rejoin). Never connect a
+        // discarded Room: its late join would kick the live one out as a "duplicate identity".
+        if (cancelled) return;
         await current.connect(connection.url, connection.token);
       } catch {
         if (!cancelled) handleFailure("Couldn't reach the call server. Check your connection and try again.");
@@ -130,6 +160,27 @@ export function MeetingRoom({
       }
       if (cancelled) return;
       setRoom(current);
+      // Reconnect health: LiveKit can report "connected" after a long outage while the other person's
+      // tracks were dropped (full rejoin under a new participant id, or a resume that lost them).
+      // If that happens, rejoin cleanly instead of leaving a frozen call.
+      const firstSid = current.localParticipant.sid;
+      current.on(RoomEvent.ConnectionStateChanged, (state) => {
+        if (!cancelled && state === ConnectionState.Connected && current.localParticipant.sid !== firstSid) handleFullReconnect();
+      });
+      current.on(RoomEvent.Reconnected, () => {
+        setTimeout(() => {
+          if (cancelled || current.state !== ConnectionState.Connected) return;
+          const missing = Array.from(current.remoteParticipants.values()).some((p) =>
+            Array.from(p.trackPublications.values()).some(
+              (pub) =>
+                (pub.source === Track.Source.Camera || pub.source === Track.Source.Microphone) &&
+                !pub.isMuted &&
+                !pub.isSubscribed,
+            ),
+          );
+          if (missing) handleFullReconnect();
+        }, 6000);
+      });
       if (prefs.speakerId) await current.switchActiveDevice("audiooutput", prefs.speakerId).catch(() => false);
       const lp = current.localParticipant;
       const results = await Promise.allSettled([
@@ -150,7 +201,7 @@ export function MeetingRoom({
       cancelled = true;
       current.off(RoomEvent.Disconnected, onDisconnected);
       // Stops every local track, so the camera light goes off on unmount.
-      void current.disconnect(true);
+      void current.disconnect(true).finally(() => e2ee?.worker.terminate());
       setRoom((r) => (r === current ? null : r));
     };
   }, [connection, prefs]);
@@ -173,7 +224,7 @@ export function MeetingRoom({
       ) : (
         <div className="grid flex-1 place-items-center" role="status">
           <span className="flex items-center gap-3 text-lg font-semibold">
-            <Loader2 className="size-5 animate-spin text-coral" /> Joining {roomName}…
+            <Loader2 className="size-5 animate-spin text-coral" /> {rejoining ? "Reconnecting to" : "Joining"} {roomName}…
           </span>
         </div>
       )}
@@ -266,6 +317,7 @@ function CallLayout({ roomName, partnerName, onLeave }: { roomName: string; part
           <Lock className="size-4 shrink-0 text-mint" aria-hidden />
           <h1 className="truncate text-lg font-bold">{roomName}</h1>
         </span>
+        <EncryptionBadge />
         {pipSupported() && (
           <Button
             size="sm"
@@ -431,5 +483,31 @@ function WaitingTile({ partnerName, left }: { partnerName: string | null; left: 
         </p>
       </div>
     </div>
+  );
+}
+
+/** Shown only when LiveKit reports every participant's media as end-to-end encrypted. */
+function EncryptionBadge() {
+  const { localParticipant } = useLocalParticipant();
+  const remote = useRemoteParticipants()[0];
+  const localEncrypted = useIsEncrypted(localParticipant);
+  if (!localEncrypted) return null;
+  // LiveKit's hook throws without a participant, so the remote check only mounts once someone's here.
+  return remote ? <RemoteEncrypted participant={remote} /> : <Badge />;
+}
+
+function RemoteEncrypted({ participant }: { participant: RemoteParticipant }) {
+  return useIsEncrypted(participant) ? <Badge /> : null;
+}
+
+function Badge() {
+  return (
+    <span
+      className="hidden items-center gap-1 rounded-full bg-mint/10 px-2.5 py-1 text-xs font-semibold text-mint sm:flex"
+      title="Audio and video are encrypted on your devices; DUO's media server only relays ciphertext."
+      data-testid="e2ee-badge"
+    >
+      <ShieldCheck className="size-3.5" aria-hidden /> End-to-end encrypted
+    </span>
   );
 }

@@ -20,6 +20,7 @@ const eslintConfig = defineConfig([
     "extension/dist-e2e/**",
     "public/mediapipe/**",
     "public/studio/**",
+    "public/livekit/**",
   ]),
 ]);
 

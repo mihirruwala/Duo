@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { DoorOpen, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ChatProvider, useMaybeChat, type Person } from "@/features/chat/chat-provider";
@@ -72,6 +72,8 @@ function RoomPhases({
   usePresenceAlerts({ chat, inCall, roomName, partnerName, url: `/r/${slug}` });
   const [joining, setJoining] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
+  const [rejoining, setRejoining] = useState(false);
+  const rejoins = useRef<number[]>([]);
 
   async function join(prefs: DevicePrefs) {
     setJoining(true);
@@ -86,15 +88,41 @@ function RoomPhases({
     }
   }
 
+  /** Clean rejoin after a broken reconnect: fresh token, fresh Room. Up to 3 tries a minute. */
+  async function rejoin(prefs: DevicePrefs) {
+    const now = Date.now();
+    rejoins.current = rejoins.current.filter((t) => now - t < 60_000);
+    if (rejoins.current.length >= 3) {
+      setPhase({
+        kind: "ended",
+        reason: { kind: "failed", message: "The connection keeps dropping. Check your network and rejoin." },
+      });
+      return;
+    }
+    rejoins.current.push(now);
+    setRejoining(true);
+    try {
+      const connection = await fetchToken(slug);
+      setPhase({ kind: "call", connection, prefs });
+    } catch {
+      setPhase({ kind: "ended", reason: { kind: "failed", message: "Couldn't reconnect to the call." } });
+    } finally {
+      setRejoining(false);
+    }
+  }
+
   if (phase.kind === "call") {
+    const prefs = phase.prefs;
     return (
       <MeetingRoom
         roomId={roomId}
         connection={phase.connection}
-        prefs={phase.prefs}
+        prefs={prefs}
         roomName={roomName}
         partnerName={partnerName}
         onLeave={(reason) => setPhase({ kind: "ended", reason })}
+        onRejoinNeeded={() => void rejoin(prefs)}
+        rejoining={rejoining}
       />
     );
   }

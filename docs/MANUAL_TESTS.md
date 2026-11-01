@@ -99,3 +99,17 @@ Tick each box and note the Chrome version and OS.
 - [ ] On an older laptop: if it struggles, you get "quality lowered", and as a last resort backgrounds/filters switch off
       with a message; the call keeps going.
 - [ ] Turn everything off, then leave the call: the camera light goes off.
+
+## Presence, PiP, settings, fun, E2EE
+
+- [ ] Home on one machine, open the room on the other: Home card says "<name> is in the room" within a few seconds; a chime
+      plays; with DUO in a background tab and notifications allowed, a system notification appears.
+- [ ] Knock from the pre-call banner: the other side hears the chime and sees "is knocking", on Home or in the room.
+- [ ] Start a call: the other person's Home card shows "is in the call · Join"; one click gets them in.
+- [ ] Share a tab for control: the mini window pops up on top; switch tabs and it stays visible; Approve and Revoke work from it.
+- [ ] Settings: rename yourself and change colour; the other person sees it after reloading. Delete a test account: wrong password
+      refused, then everything for that account is gone.
+- [ ] Reactions float up on both screens; photo booth: both see 3-2-1, either can cancel; the photo appears in chat and Moments.
+- [ ] Phone (or a narrow window): call controls fit, More holds reactions, Effects and Photo booth; chat opens full screen.
+- [ ] Call header shows "End-to-end encrypted" on both sides; turning it off in room settings removes the badge on the next join.
+- [ ] Screen reader (VoiceOver): landing, sign-in, room and call controls are announced with sensible names.

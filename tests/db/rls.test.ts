@@ -426,3 +426,39 @@ describe("remote-control audit log", () => {
     );
   });
 });
+
+describe("end-to-end media key", () => {
+  it("members can read the room's media key; outsiders and anon can't", async () => {
+    const [k] = await as(db, guest, (q) =>
+      q<{ media_key: string; e2ee_enabled: boolean }>("select media_key, e2ee_enabled from public.rooms where id = $1", [
+        room.room_id,
+      ]),
+    );
+    expect(Buffer.from(k!.media_key, "base64")).toHaveLength(32);
+    expect(k!.e2ee_enabled).toBe(true);
+    expect(await as(db, outsider, (q) => q("select media_key from public.rooms where id = $1", [room.room_id]))).toHaveLength(0);
+    await expectError(
+      as(db, null, (q) => q("select media_key from public.rooms")),
+      /permission denied/,
+    );
+  });
+
+  it("the key rotates when the allowlist changes, and clients can't set it", async () => {
+    const [r] = await asCommit(db, outsider, (q) => q<RoomRow>("select * from public.create_room('Rotate')"));
+    const key = async () =>
+      (await db.query<{ media_key: string }>("select media_key from public.rooms where id = $1", [r!.room_id])).rows[0]!
+        .media_key;
+    const before = await key();
+    await asCommit(db, guest, (q) => q("select * from public.redeem_invite($1)", [r!.invite_code]));
+    const afterJoin = await key();
+    expect(afterJoin).not.toBe(before);
+    await asCommit(db, guest, (q) =>
+      q("delete from public.room_members where room_id = $1 and user_id = $2", [r!.room_id, guest]),
+    );
+    expect(await key()).not.toBe(afterJoin);
+    await expectError(
+      as(db, outsider, (q) => q("update public.rooms set media_key = 'x' where id = $1", [r!.room_id])),
+      /permission denied/,
+    );
+  });
+});
