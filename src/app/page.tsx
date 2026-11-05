@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, Clapperboard, MessageCircleHeart, MousePointer2, Sparkles } from "lucide-react";
 import { Wordmark } from "@/components/brand/logo";
@@ -7,6 +8,15 @@ import { JoinCodeForm } from "@/features/rooms/components/join-code-form";
 import { isConfigured } from "@/lib/env";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { FEATURES, type FeatureKey } from "@/shared/features";
+
+export const metadata: Metadata = {
+  title: { absolute: "DUO: a private space for two" },
+  description:
+    "Video calls for exactly two people, end-to-end encrypted. Chat with voice notes and shared lists, watch YouTube together in sync, and hand over a browser tab when you need help.",
+  alternates: { canonical: "/" },
+  robots: { index: true, follow: true },
+  openGraph: { title: "DUO: a private space for two", url: "/" },
+};
 
 const PILLARS: { icon: typeof MousePointer2; title: string; body: string; feature: FeatureKey; tint: string }[] = [
   {

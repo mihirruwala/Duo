@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Wordmark } from "@/components/brand/logo";
 
 export const metadata: Metadata = {
+  robots: { index: true, follow: true },
   title: "Privacy",
   description: "What DUO and the DUO Control extension do with your data.",
 };

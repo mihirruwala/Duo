@@ -10,8 +10,13 @@ const figtree = Figtree({ variable: "--font-figtree", subsets: ["latin"], displa
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"], display: "swap" });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"),
   title: { default: "DUO", template: "%s · DUO" },
-  description: "A private space for two: connect, share, take control, and have fun.",
+  description: "A private space for two: video calls, chat, watching together and screen sharing, just for the two of you.",
+  applicationName: "DUO",
+  openGraph: { siteName: "DUO", type: "website", locale: "en" },
+  twitter: { card: "summary_large_image" },
+  // Private by default; the public pages (landing, sign-up, privacy) opt in to search engines.
   robots: { index: false, follow: false },
 };
 

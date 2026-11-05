@@ -83,7 +83,7 @@ export function AuthForm({ mode, next }: { mode: Mode; next?: string }) {
       <div className="flex flex-col items-center gap-3 text-center" role="status">
         <MailCheck className="size-10 text-mint" aria-hidden />
         <h2 className="text-2xl font-bold">Check your inbox</h2>
-        <p className="text-muted-foreground">We sent you a confirmation link. Open it on this device to finish signing up.</p>
+        <p className="text-muted-foreground">We sent you a confirmation link. Open it on any device to finish signing up.</p>
       </div>
     );
   }
@@ -100,7 +100,21 @@ export function AuthForm({ mode, next }: { mode: Mode; next?: string }) {
       <Field id="email" label="Email" error={errors.email}>
         <Input id="email" name="email" type="email" autoComplete="email" placeholder="you@example.com" />
       </Field>
-      <Field id="password" label="Password" error={errors.password}>
+      <Field
+        id="password"
+        label="Password"
+        error={errors.password}
+        aside={
+          mode === "sign-in" ? (
+            <Link
+              href="/forgot-password"
+              className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+            >
+              Forgot password?
+            </Link>
+          ) : undefined
+        }
+      >
         <Input
           id="password"
           name="password"
@@ -135,16 +149,22 @@ function Field({
   id,
   label,
   error,
+  aside,
   children,
 }: {
   id: string;
   label: string;
   error?: string;
+  /** Shown at the end of the label row (e.g. "Forgot password?"). */
+  aside?: React.ReactNode;
   children: React.ReactElement<React.ComponentProps<"input">>;
 }) {
   return (
     <div className="flex flex-col gap-2">
-      <Label htmlFor={id}>{label}</Label>
+      <div className="flex items-baseline justify-between gap-2">
+        <Label htmlFor={id}>{label}</Label>
+        {aside}
+      </div>
       {cloneElement(children, {
         "aria-invalid": error ? true : undefined,
         "aria-describedby": error ? `${id}-error` : undefined,

@@ -66,6 +66,8 @@ guide is in [`docs/EXTENSION.md`](docs/EXTENSION.md). Publishing it on the Chrom
 
 GIFs need a GIPHY API key in `GIPHY_API_KEY`; without it the GIF button is hidden.
 
+Password reset and email confirmation need your own email sender and a domain: see [`docs/EMAIL.md`](docs/EMAIL.md).
+
 ## Deploying (Vercel, Supabase, LiveKit Cloud)
 
 It runs at https://duo-virid-eta.vercel.app (Vercel project `mihirruwalas-projects/duo`, functions in `dub1` so they

@@ -15,6 +15,7 @@ import { Switch } from "@/components/ui/switch";
 import { getAlertPrefs, notificationPermission, requestNotificationPermission, setAlertPrefs } from "@/features/presence/alerts";
 import { getBrowserClient } from "@/lib/supabase/client";
 import { friendlyError } from "@/shared/errors";
+import { ChangePasswordForm } from "@/features/auth/components/password-forms";
 
 const nameSchema = z.string().trim().min(1, "Your name can't be empty.").max(40, "Keep it under 40 characters.");
 
@@ -159,6 +160,7 @@ export function AccountSection({ email }: { email: string }) {
       <p className="text-sm text-muted-foreground">
         Signed in as <span className="font-semibold text-foreground">{email}</span>
       </p>
+      <ChangePasswordForm email={email} />
       <div className="flex flex-wrap gap-2">
         <Button
           variant="outline"

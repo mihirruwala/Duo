@@ -271,6 +271,18 @@ Migrations: `20261105000100_note_kinds.sql`, `20261105000200_voice_video_notes.s
 
 Deployed 2026-11-05 to https://duo-virid-eta.vercel.app; the new specs, call and smoke suites pass against production.
 
+## Ready for strangers, part 1 (2026-11-05)
+
+- **Password reset:** "Forgot password?" on sign-in → `/forgot-password` (never reveals whether an account exists) →
+  email link → `/auth/confirm` (one-time token hash, so the link works on any device) → `/reset-password` → home.
+  Expired or reused links explain themselves; so do failed confirmation links on sign-in, which used to fail silently.
+- **Change password** in Settings, after checking the current one.
+- **Findable:** landing, sign-up and privacy are indexable; everything private stays `noindex` and is disallowed in
+  `robots.txt`. `sitemap.xml`, canonical URL, and a 1200×630 preview card for links pasted into chat apps.
+- Needs a domain and an email provider before reset emails reach real people: see `docs/EMAIL.md`.
+- _Verified:_ `account.spec.ts` (reset link opened in a different browser context, single use, old password refused,
+  change password, robots/sitemap/preview card, private pages noindex).
+
 ## Chrome Web Store (2026-11-05)
 
 - `npm run ext:build:store` builds an upload-ready zip: production origin only, no `key` (the store assigns the ID).
