@@ -94,13 +94,14 @@ export async function createJoinedRoom(host: Page, guest: Page, roomName = "E2E 
   await host.getByRole("button", { name: "Create room" }).click();
   const inviteUrl = await host.getByTestId("invite-link").inputValue();
   await host.getByRole("link", { name: /Enter room/ }).click();
-  await expect(host).toHaveURL(/\/r\/[A-Za-z0-9_-]{22}$/);
+  // Real network round trips (and a cold server right after a deploy) can take a few seconds.
+  await expect(host).toHaveURL(/\/r\/[A-Za-z0-9_-]{22}$/, { timeout: 20_000 });
   const roomUrl = host.url();
 
   const invite = new URL(inviteUrl);
   await guest.goto(invite.pathname + invite.hash);
   await guest.getByRole("button", { name: "Join room" }).click();
-  await expect(guest).toHaveURL(roomUrl);
+  await expect(guest).toHaveURL(roomUrl, { timeout: 20_000 });
   return { roomUrl, inviteUrl };
 }
 
