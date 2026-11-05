@@ -10,6 +10,7 @@ export const FEATURES = {
   chat: true, // M3
   remoteControl: true, // M4
   studio: true, // M5
+  watchTogether: true, // Watch Together + Watch mode
 } as const;
 
 export type FeatureKey = keyof typeof FEATURES;

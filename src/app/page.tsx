@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, MessageCircleHeart, MousePointer2, Sparkles } from "lucide-react";
+import { ArrowRight, Clapperboard, MessageCircleHeart, MousePointer2, Sparkles } from "lucide-react";
 import { Wordmark } from "@/components/brand/logo";
 import { ComingSoon } from "@/components/duo/coming-soon";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,7 @@ const PILLARS: { icon: typeof MousePointer2; title: string; body: string; featur
   {
     icon: MessageCircleHeart,
     title: "Chat that keeps up",
-    body: "Replies, reactions, GIFs, stickers, photos and files, right beside the call and saved for next time.",
+    body: "Replies, reactions, GIFs, stickers, photos, voice notes and shared lists, right beside the call and saved for next time.",
     feature: "chat",
     tint: "text-violet",
   },
@@ -29,6 +29,13 @@ const PILLARS: { icon: typeof MousePointer2; title: string; body: string; featur
     body: "Cat ears, VHS fuzz, a cozy room behind you. Live effects your person actually sees.",
     feature: "studio",
     tint: "text-mint",
+  },
+  {
+    icon: Clapperboard,
+    title: "Watch together",
+    body: "Press play on a YouTube video for both of you at once, or share the tab your show is playing in.",
+    feature: "watchTogether",
+    tint: "text-sun",
   },
 ];
 
@@ -85,7 +92,7 @@ export default async function LandingPage() {
         <h2 id="pillars" className="sr-only">
           What you can do in DUO
         </h2>
-        <ul className="grid gap-4 md:grid-cols-3">
+        <ul className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {PILLARS.map(({ icon: Icon, title, body, feature, tint }) => (
             <li key={title} className="surface flex flex-col gap-3 rounded-3xl p-6">
               <div className="flex items-center justify-between">
@@ -102,7 +109,7 @@ export default async function LandingPage() {
       </section>
 
       <footer className="mx-auto w-full max-w-6xl px-4 pb-8 text-sm text-muted-foreground sm:px-6">
-        No recording. No public rooms. Calls are encrypted in transit.
+        No recording. No public rooms. Calls are end-to-end encrypted by default, and chat is saved privately for the two of you.
       </footer>
     </div>
   );

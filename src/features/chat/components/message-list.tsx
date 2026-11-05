@@ -159,7 +159,7 @@ export function MessageList({
             </div>
           )}
           {messages.length === 0 ? (
-            <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
+            <div className="flex flex-col items-center justify-center gap-2 px-6 pt-12 pb-6 text-center">
               <span className="text-4xl" aria-hidden>
                 💬
               </span>

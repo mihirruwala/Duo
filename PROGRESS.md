@@ -271,6 +271,26 @@ Migrations: `20261105000100_note_kinds.sql`, `20261105000200_voice_video_notes.s
 
 Deployed 2026-11-05 to https://duo-virid-eta.vercel.app; the new specs, call and smoke suites pass against production.
 
+## Audit phase 1 (2026-11-05)
+
+Found during a full audit (code, live site, screenshots at desktop and phone sizes).
+
+| ID  | Problem                                                                                                                                                                                                            | Fix                                                                                                                                                        | Test                                                       |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| V1b | **First call in a new room had no video or sound** if the host was already in the call when the guest accepted the invite. Accepting replaces the room's media key, and the host kept encrypting with the old one. | When someone new shows up on the room channel, the room page refreshes its data and a call in progress rejoins with a fresh token (`room-experience.tsx`). | `first-call.spec.ts` (failed on production before the fix) |
+| V1  | A host waiting in a new room never saw their person arrive (members list, name, presence) until reloading.                                                                                                         | Same refresh.                                                                                                                                              | `first-call.spec.ts`                                       |
+| V3  | On phones the call was two small stacked tiles with yourself on top.                                                                                                                                               | Narrow screens default to your person big and you floating top-left (`call-stage.tsx`).                                                                    | `first-call.spec.ts` (phone viewport)                      |
+| V4  | The Share button showed on browsers that can't share a screen (Android, iOS).                                                                                                                                      | Hidden unless `getDisplayMedia` exists.                                                                                                                    | `first-call.spec.ts`                                       |
+| V5  | The headphones tip covered YouTube's controls.                                                                                                                                                                     | Moved to a strip under the Watch Together header.                                                                                                          | `pin-watch.spec.ts`                                        |
+| V6  | Landing said "encrypted in transit" and didn't mention watching together, voice notes or lists.                                                                                                                    | Accurate privacy line, a fourth pillar.                                                                                                                    | `smoke.spec.ts`, axe                                       |
+| V7  | Chat empty state was cramped against the top on phones.                                                                                                                                                            | Spacing.                                                                                                                                                   | screenshot                                                 |
+
+Also: patch updates (Next 16.4.5, React 19.3.1, supabase-js 2.119.0, lucide-react 1.69.0). Production
+dependencies have no known vulnerabilities; the dev-only tools (shadcn CLI, ESLint) have moderate advisories whose
+fixes are breaking downgrades, so they stay as they are.
+
+Seen once and passed on rerun: the XSS spec (one link missing from the list) and Watch Together. Not reproduced.
+
 ## Deployment (2026-10-31)
 
 - Live at **https://duo-virid-eta.vercel.app** (Vercel, functions in `dub1`; Supabase `eu-west-1`; LiveKit Cloud).

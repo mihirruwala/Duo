@@ -253,6 +253,8 @@ function CallLayout({ roomName, partnerName, onLeave }: { roomName: string; part
   const pip = useCallPip();
   const fun = useCallFun();
   const [pin, setPin] = useCallPin();
+  // Phones (Android Chrome, iOS Safari) can't share a screen from a web page: hide it there.
+  const [canShare] = useState(() => FEATURES.screenShare && typeof navigator.mediaDevices?.getDisplayMedia === "function");
   const watch = useWatchTogether();
   const [watchDialog, setWatchDialog] = useState(false);
   const watchSuggestions = useWatchSuggestions();
@@ -517,12 +519,12 @@ function CallLayout({ roomName, partnerName, onLeave }: { roomName: string; part
           camOn={isCameraEnabled}
           sharing={isScreenShareEnabled}
           shareBlockedBy={shareBlockedBy}
-          canShare={FEATURES.screenShare}
+          canShare={canShare}
           modKey={modKey}
           onToggleMic={() => void toggleMic()}
           onToggleCam={() => void toggleCam()}
           onToggleShare={() => void toggleShare()}
-          onShareWatch={() => void startWatchShare()}
+          onShareWatch={canShare ? () => void startWatchShare() : undefined}
           onShareControllable={
             FEATURES.remoteControl
               ? () => {
@@ -549,7 +551,7 @@ function CallLayout({ roomName, partnerName, onLeave }: { roomName: string; part
         changing={!!watch.session}
         suggestions={watchSuggestions}
         onStart={(videoId, start) => watch.open(videoId, start)}
-        onShareTab={share ? undefined : () => void startWatchShare()}
+        onShareTab={share || !canShare ? undefined : () => void startWatchShare()}
       />
       <CallPip pipWindow={pip.pipWindow} />
       <CallFunOverlay fun={fun} />

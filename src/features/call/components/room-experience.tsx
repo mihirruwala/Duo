@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { DoorOpen, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ChatProvider, useMaybeChat, type Person } from "@/features/chat/chat-provider";
@@ -77,6 +78,7 @@ function RoomPhases({
   const [joinError, setJoinError] = useState<string | null>(null);
   const [rejoining, setRejoining] = useState(false);
   const rejoins = useRef<number[]>([]);
+  const router = useRouter();
 
   async function join(prefs: DevicePrefs) {
     setJoining(true);
@@ -113,6 +115,21 @@ function RoomPhases({
       setRejoining(false);
     }
   }
+
+  // Someone we don't know yet showed up on the room's channel: the invite was just accepted. The room
+  // details here were rendered before that, so fetch them again. Accepting an invite also replaces the
+  // room's media key, so a call that started before they arrived must rejoin with a fresh token, or
+  // the two of you would encrypt with different keys and see nothing of each other.
+  const newArrival = !partner && !!chat?.partnerPresence.online;
+  const onArrival = useEffectEvent(() => {
+    router.refresh();
+    if (phase.kind === "call") void rejoin(phase.prefs);
+  });
+  useEffect(() => {
+    if (!newArrival) return;
+    const t = setTimeout(onArrival, 0);
+    return () => clearTimeout(t);
+  }, [newArrival]);
 
   if (phase.kind === "call") {
     const prefs = phase.prefs;

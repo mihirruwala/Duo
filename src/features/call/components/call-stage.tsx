@@ -1,9 +1,23 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import type { TrackReferenceOrPlaceholder } from "@livekit/components-react";
 import { cn } from "@/lib/utils";
 import { ParticipantTile } from "./participant-tile";
+
+const NARROW = "(max-width: 767px)";
+/** Phones: side-by-side tiles leave both people tiny, so the default becomes "them big, me floating". */
+function useNarrow() {
+  return useSyncExternalStore(
+    (onChange) => {
+      const mq = window.matchMedia(NARROW);
+      mq.addEventListener("change", onChange);
+      return () => mq.removeEventListener("change", onChange);
+    },
+    () => window.matchMedia(NARROW).matches,
+    () => false,
+  );
+}
 
 /** Who has the big spot. `null` = automatic (side by side, or the shared content when there is some). */
 export type CallPin = "them" | "me" | null;
@@ -71,8 +85,9 @@ export function CallStage({
   onPin: (pin: CallPin) => void;
 }) {
   // A pin on someone who isn't here (yet) falls back to automatic, without forgetting the choice.
+  const narrow = useNarrow();
   const effective: CallPin = pin === "them" && !remoteCam ? null : pin === "me" && !localCam ? null : pin;
-  const main: "content" | "them" | "me" | null = effective ?? (content ? "content" : null);
+  const main: "content" | "them" | "me" | null = effective ?? (content ? "content" : narrow && remoteCam ? "them" : null);
   const layout = content ? "side" : main ? "solo" : "duo";
 
   const slots: Record<"content" | "them" | "me", Slot> = (() => {
@@ -92,7 +107,8 @@ export function CallStage({
         : s === "main"
           ? "h-full min-h-0 w-full"
           : s === "float"
-            ? "absolute right-3 bottom-3 z-10 aspect-video w-32 shadow-2xl sm:w-52"
+            ? // Phones: top-left, clear of the Chat button and the pin button. Larger screens: bottom-right.
+              "absolute top-3 left-3 z-10 aspect-[3/4] w-28 shadow-2xl sm:top-auto sm:right-3 sm:bottom-3 sm:left-auto sm:aspect-video sm:w-52"
             : "aspect-video w-full",
     );
   const small = (s: Slot) => s === "t1" || s === "t2" || s === "float";

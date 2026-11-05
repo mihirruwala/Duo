@@ -156,6 +156,21 @@ export function WatchStage({
         </div>
       )}
 
+      {showTip && !compact && status === "ready" && (
+        <div className="flex items-center gap-2 border-b border-white/8 bg-ink-1 px-3 py-1.5 text-xs sm:px-4" role="note">
+          <Headphones className="size-3.5 shrink-0 text-coral" aria-hidden />
+          <span className="flex-1">Headphones work best: otherwise your mic picks up the video and they hear it twice.</span>
+          <button
+            type="button"
+            onClick={dismissTip}
+            aria-label="Dismiss tip"
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <X className="size-3.5" />
+          </button>
+        </div>
+      )}
+
       <div className="relative min-h-0 flex-1 bg-black">
         <div ref={hostRef} className="absolute inset-0" />
         {status === "loading" && (
@@ -191,20 +206,6 @@ export function WatchStage({
               <Play className="size-5" /> Join playback
             </span>
           </button>
-        )}
-        {showTip && !compact && status === "ready" && (
-          <div className="absolute bottom-14 left-3 z-10 flex max-w-xs items-start gap-2 rounded-2xl bg-ink-2/95 p-3 text-xs shadow-xl">
-            <Headphones className="mt-0.5 size-4 shrink-0 text-coral" aria-hidden />
-            <span className="flex-1">Headphones work best: otherwise your mic picks up the video and they hear it twice.</span>
-            <button
-              type="button"
-              onClick={dismissTip}
-              aria-label="Dismiss tip"
-              className="text-muted-foreground hover:text-foreground"
-            >
-              <X className="size-3.5" />
-            </button>
-          </div>
         )}
       </div>
 
