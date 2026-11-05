@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { MAX_MESSAGE_LENGTH } from "@/shared/chat";
+import { formatDuration, MAX_MESSAGE_LENGTH } from "@/shared/chat";
 import type { AttachmentRow, ReactionRow } from "@/shared/database";
 import { summarizeReactions, type ChatMessage } from "../chat-reducer";
 import type { Person } from "../chat-provider";
@@ -55,6 +55,11 @@ export function replySnippet(m: ChatMessage | undefined): string {
       return "Sticker";
     case "file":
       return `📎 ${(m.meta as { file_name?: string }).file_name ?? "File"}`;
+    case "voice":
+    case "video": {
+      const ms = (m.meta as { duration_ms?: number }).duration_ms;
+      return `${m.kind === "voice" ? "🎤 Voice message" : "📹 Video message"}${ms ? ` (${formatDuration(ms)})` : ""}`;
+    }
   }
 }
 
@@ -67,7 +72,7 @@ export const MessageItem = memo(function MessageItem(props: MessageItemProps) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const deleted = !!m.deleted_at;
   const media = m.kind === "gif" || m.kind === "sticker" || m.kind === "image";
-  const bare = m.kind === "sticker" || ((m.kind === "gif" || m.kind === "image") && !m.body);
+  const bare = m.kind === "sticker" || m.kind === "video" || ((m.kind === "gif" || m.kind === "image") && !m.body);
   const reactions = summarizeReactions(props.reactions, myId);
   const confirmed = m.status === "sent";
 

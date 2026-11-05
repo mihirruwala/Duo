@@ -20,6 +20,21 @@ export const ALLOWED_UPLOAD_TYPES: Record<string, { kind: "image" | "file"; labe
 export const UPLOAD_ACCEPT = Object.keys(ALLOWED_UPLOAD_TYPES).join(",");
 
 /**
+ * Recorded voice and video notes. Accepted only as notes (kind voice/video, recorded in DUO), never as
+ * general attachments. Mirrors the bucket + attachments CHECK + send_attachment_message.
+ */
+export const NOTE_TYPES: Record<string, { kind: "voice" | "video"; ext: string }> = {
+  "audio/webm": { kind: "voice", ext: "webm" },
+  "audio/mp4": { kind: "voice", ext: "m4a" },
+  "audio/ogg": { kind: "voice", ext: "ogg" },
+  "video/webm": { kind: "video", ext: "webm" },
+  "video/mp4": { kind: "video", ext: "mp4" },
+};
+export const MAX_VOICE_MS = 5 * 60 * 1000;
+export const MAX_VIDEO_MS = 60 * 1000;
+export const WAVEFORM_BARS = 48;
+
+/**
  * Make a user-supplied file name safe to store and display: strip paths and control chars,
  * collapse whitespace, keep a short extension, cap the length. Never empty.
  */
@@ -40,7 +55,7 @@ export function sanitizeFileName(name: string): string {
 
 export const uploadRequestSchema = z.object({
   fileName: z.string().min(1).max(500),
-  mimeType: z.string().refine((t) => t in ALLOWED_UPLOAD_TYPES, "That file type isn't allowed."),
+  mimeType: z.string().refine((t) => t in ALLOWED_UPLOAD_TYPES || t in NOTE_TYPES, "That file type isn't allowed."),
   size: z.number().int().positive().max(MAX_UPLOAD_BYTES, "Files can be up to 25 MB."),
 });
 export type UploadRequest = z.infer<typeof uploadRequestSchema>;
@@ -84,6 +99,17 @@ export const attachmentMetaSchema = z.object({
   width: z.number().nullable().optional(),
   height: z.number().nullable().optional(),
 });
+
+export const noteMetaSchema = attachmentMetaSchema.extend({
+  duration_ms: z.number().int().positive(),
+  waveform: z.array(z.number().int().min(0).max(100)).max(64).optional(),
+});
+
+/** "m:ss" */
+export function formatDuration(ms: number): string {
+  const total = Math.max(0, Math.round(ms / 1000));
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
+}
 
 // ── Stickers (original artwork in /public/stickers) ─────────────────────────
 

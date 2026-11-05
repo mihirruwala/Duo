@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Bookmark, Images, MessageCircle, Minus, MoveDiagonal2, Upload } from "lucide-react";
+import { Bookmark, Images, ListChecks, MessageCircle, Minus, MoveDiagonal2, Upload } from "lucide-react";
+import { ListsPanel } from "@/features/lists/components/lists-panel";
 import { toast } from "sonner";
 import { DuoAvatar } from "@/components/duo/avatar";
 import { cn } from "@/lib/utils";
@@ -11,7 +12,7 @@ import { ImageViewer, type ViewerItem } from "./image-viewer";
 import { MediaGallery, MomentsGrid } from "./media-gallery";
 import { MessageList } from "./message-list";
 
-type Tab = "chat" | "media" | "moments";
+type Tab = "chat" | "media" | "moments" | "lists";
 type Size = { width: number; height: number };
 
 const PREF_KEY = "duo.chatDock.v1";
@@ -205,12 +206,17 @@ export function ChatDock({ roomId, gifsEnabled }: { roomId: string; gifsEnabled:
           </button>
         </header>
 
-        <div role="tablist" aria-label="Chat sections" className="flex gap-1 border-b border-border px-2 py-1.5">
+        <div
+          role="tablist"
+          aria-label="Chat sections"
+          className="flex gap-0.5 overflow-x-auto border-b border-border px-2 py-1.5"
+        >
           {(
             [
               ["chat", "Chat", MessageCircle],
               ["media", "Media", Images],
               ["moments", "Moments", Bookmark],
+              ["lists", "Lists", ListChecks],
             ] as const
           ).map(([id, label, Icon]) => (
             <button
@@ -220,7 +226,7 @@ export function ChatDock({ roomId, gifsEnabled }: { roomId: string; gifsEnabled:
               aria-selected={tab === id}
               onClick={() => setTab(id)}
               className={cn(
-                "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors",
+                "flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-semibold transition-colors",
                 tab === id ? "bg-ink-3 text-foreground" : "text-muted-foreground hover:text-foreground",
               )}
             >
@@ -237,6 +243,7 @@ export function ChatDock({ roomId, gifsEnabled }: { roomId: string; gifsEnabled:
         )}
         {tab === "media" && <MediaGallery roomId={roomId} onOpen={(items, id) => setViewer({ items, id })} />}
         {tab === "moments" && <MomentsGrid onOpen={(items, id) => setViewer({ items, id })} />}
+        {tab === "lists" && <ListsPanel />}
 
         {dragging && (
           <div className="pointer-events-none absolute inset-2 grid place-items-center rounded-3xl border-2 border-dashed border-coral bg-ink-1/80 text-coral">

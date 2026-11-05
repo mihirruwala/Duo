@@ -8,7 +8,8 @@ const securityHeaders = [
   { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
   {
     key: "Permissions-Policy",
-    value: "camera=(self), microphone=(self), display-capture=(self), fullscreen=(self), geolocation=(), payment=(), usb=()",
+    value:
+      'camera=(self), microphone=(self), display-capture=(self), fullscreen=(self "https://www.youtube-nocookie.com" "https://www.youtube.com"), geolocation=(), payment=(), usb=()',
   },
   ...(process.env.NODE_ENV === "production"
     ? [{ key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" }]

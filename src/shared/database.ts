@@ -7,7 +7,7 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type MemberRole = "host" | "guest";
-export type MessageKind = "text" | "image" | "gif" | "sticker" | "file";
+export type MessageKind = "text" | "image" | "gif" | "sticker" | "file" | "voice" | "video";
 export type ControlStatus = "requested" | "approved" | "denied" | "revoked" | "expired" | "ended";
 
 type Table<Row, Insert, Update> = { Row: Row; Insert: Insert; Update: Update; Relationships: [] };
@@ -66,6 +66,29 @@ export type AttachmentRow = {
   created_at: string;
 };
 
+export type ListRow = {
+  id: string;
+  room_id: string;
+  title: string;
+  emoji: string;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ListItemRow = {
+  id: string;
+  list_id: string;
+  room_id: string;
+  body: string;
+  done: boolean;
+  done_by: string | null;
+  done_at: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type MomentRow = { id: string; room_id: string; message_id: string; saved_by: string; created_at: string };
 
 export type ControlSessionRow = {
@@ -110,6 +133,16 @@ export type Database = {
       >;
       moments: Table<MomentRow, Pick<MomentRow, "message_id"> & { room_id?: string }, never>;
       control_sessions: Table<ControlSessionRow, never, never>;
+      lists: Table<
+        ListRow,
+        Pick<ListRow, "room_id" | "title"> & Partial<Pick<ListRow, "id" | "emoji">>,
+        Partial<Pick<ListRow, "title" | "emoji">>
+      >;
+      list_items: Table<
+        ListItemRow,
+        Pick<ListItemRow, "list_id" | "body"> & Partial<Pick<ListItemRow, "id" | "done">>,
+        Partial<Pick<ListItemRow, "body" | "done">>
+      >;
     };
     Views: { [_ in never]: never };
     Functions: {
@@ -142,6 +175,9 @@ export type Database = {
           p_file_name: string;
           p_width: number | null;
           p_height: number | null;
+          /** Voice and video notes only. */
+          p_duration_ms?: number | null;
+          p_waveform?: number[] | null;
         };
         Returns: MessageRow;
       };

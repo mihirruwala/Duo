@@ -9,7 +9,7 @@ import {
   type TrackReferenceOrPlaceholder,
 } from "@livekit/components-react";
 import { ConnectionQuality, Track, type Participant } from "livekit-client";
-import { MicOff, Signal, SignalLow, SignalMedium, WifiOff } from "lucide-react";
+import { Maximize2, MicOff, Pin, PinOff, Signal, SignalLow, SignalMedium, WifiOff } from "lucide-react";
 import { DuoAvatar } from "@/components/duo/avatar";
 import { cn } from "@/lib/utils";
 import { parseParticipantHue } from "@/shared/call";
@@ -19,10 +19,24 @@ export function ParticipantTile({
   trackRef,
   variant = "stage",
   className,
+  style,
+  slot,
+  pinned,
+  onTogglePin,
+  onActivate,
 }: {
   trackRef: TrackReferenceOrPlaceholder;
   variant?: "stage" | "thumb";
   className?: string;
+  style?: React.CSSProperties;
+  /** Where the tile sits in the call layout (for tests and styling). */
+  slot?: string;
+  /** This tile is pinned to the big spot. */
+  pinned?: boolean;
+  /** Pin/unpin this person (double-click the tile does the same). */
+  onTogglePin?: () => void;
+  /** Set on small tiles: clicking swaps this one into the big spot. */
+  onActivate?: (e: React.MouseEvent) => void;
 }) {
   const participant = trackRef.participant;
   const isLocal = participant.isLocal;
@@ -37,14 +51,21 @@ export function ParticipantTile({
   const name = participant.name || "Someone";
   const micPub = participant.getTrackPublication(Track.Source.Microphone);
 
+  const who = isLocal ? "yourself" : name;
+
   return (
     <div
       data-testid={isLocal ? "tile-local" : "tile-remote"}
+      data-slot={slot}
+      data-pinned={pinned ? "" : undefined}
+      style={style}
+      // On small tiles a click already swaps; double-click toggles the pin on big ones.
+      onDoubleClick={onActivate ? undefined : onTogglePin}
       data-speaking={speaking ? "" : undefined}
       data-has-video={hasVideo ? "" : undefined}
       data-audio-subscribed={!isLocal && micPub?.isSubscribed ? "" : undefined}
       className={cn(
-        "relative isolate overflow-hidden bg-ink-0 ring-1 ring-white/8 transition-shadow duration-200",
+        "group/tile relative isolate overflow-hidden bg-ink-0 ring-1 ring-white/8 transition-shadow duration-200",
         variant === "stage" ? "rounded-[1.75rem]" : "rounded-2xl",
         speaking && "ring-3 ring-mint/80",
         className,
@@ -63,9 +84,42 @@ export function ParticipantTile({
         </div>
       )}
 
+      {onActivate && (
+        <button
+          type="button"
+          onClick={onActivate}
+          aria-label={`Make ${who} big`}
+          data-testid="tile-activate"
+          className="absolute inset-0 z-[1] grid place-items-center bg-black/0 text-white opacity-0 transition hover:bg-black/30 hover:opacity-100 focus-visible:bg-black/30 focus-visible:opacity-100"
+        >
+          <Maximize2 className="size-5" aria-hidden />
+        </button>
+      )}
+
+      {onTogglePin && (
+        <button
+          type="button"
+          onClick={onTogglePin}
+          onDoubleClick={(e) => e.stopPropagation()}
+          aria-label={pinned ? `Unpin ${who}` : `Pin ${who}`}
+          aria-pressed={pinned}
+          data-testid="tile-pin"
+          title={pinned ? "Unpin (or double-click the video)" : "Pin to the big spot (or double-click the video)"}
+          className={cn(
+            "absolute top-2 right-2 z-[2] grid place-items-center rounded-full bg-black/50 text-white backdrop-blur transition hover:bg-black/70 focus-visible:opacity-100",
+            variant === "stage" ? "size-9" : "size-7",
+            pinned
+              ? "text-coral opacity-100"
+              : "opacity-0 group-hover/tile:opacity-100 group-focus-within/tile:opacity-100 [@media(hover:none)]:opacity-100",
+          )}
+        >
+          {pinned ? <PinOff className="size-4" aria-hidden /> : <Pin className="size-4" aria-hidden />}
+        </button>
+      )}
+
       <div
         className={cn(
-          "absolute inset-x-0 bottom-0 flex items-center gap-2 bg-gradient-to-t from-black/60 to-transparent",
+          "pointer-events-none absolute inset-x-0 bottom-0 z-[2] flex items-center gap-2 bg-gradient-to-t from-black/60 to-transparent",
           variant === "stage" ? "p-4" : "p-2",
         )}
       >

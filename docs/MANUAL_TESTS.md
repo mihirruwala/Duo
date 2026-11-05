@@ -113,3 +113,17 @@ Tick each box and note the Chrome version and OS.
 - [ ] Phone (or a narrow window): call controls fit, More holds reactions, Effects and Photo booth; chat opens full screen.
 - [ ] Call header shows "End-to-end encrypted" on both sides; turning it off in room settings removes the badge on the next join.
 - [ ] Screen reader (VoiceOver): landing, sign-in, room and call controls are announced with sensible names.
+
+## Pin, Watch Together, notes, shared lists
+
+- [ ] In a call, hover the other person's tile → Pin: they fill the stage, you float in the corner. Click your small tile to
+      swap; the other side's layout doesn't change. Rejoin: the pin is remembered.
+- [ ] While they share their screen, pin them: their face is big, the share keeps playing as a thumbnail; tap it to bring it back.
+- [ ] Watch together → paste a YouTube link: it starts for both. Pause, play and skip from either side; positions stay within ~1 s.
+      Pin your person during the film: the video keeps playing in the thumbnail. End from either side.
+- [ ] Join a call where the other person is already watching: you jump to the same video and moment.
+- [ ] Without headphones, the other person hears the film through your mic (expected; the tip says so).
+- [ ] Hold a conversation by voice notes: record, discard, send; play at 1×/1.5×/2×. Video note: live preview, plays on the
+      other side with sound. Safari records `audio/mp4`/`video/mp4` and they play in Chrome too.
+- [ ] Lists tab: a template creates a list; add, tick off, edit and delete items on one machine and watch them change on the
+      other. A YouTube link in a list shows "Watch" while you're in a call and starts it for both.

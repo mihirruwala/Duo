@@ -3,7 +3,8 @@
 A private video-call space for two people. Call, chat, share your screen, and with permission, let the other person take the wheel in a browser tab.
 
 > Status: **v1 feature-complete**: rooms, video (end-to-end encrypted), chat, remote control, DUO Studio, presence & knock,
-> picture-in-picture, settings, in-call fun. Security model: [`docs/SECURITY.md`](docs/SECURITY.md). See [`PROGRESS.md`](PROGRESS.md) for what's built and verified.
+> picture-in-picture, settings, in-call fun, pin/spotlight, Watch Together (synced YouTube), voice & video notes,
+> shared lists. Security model: [`docs/SECURITY.md`](docs/SECURITY.md). See [`PROGRESS.md`](PROGRESS.md) for what's built and verified.
 > Architecture, protocols and design decisions: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ## Stack

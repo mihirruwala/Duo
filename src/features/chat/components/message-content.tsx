@@ -10,6 +10,7 @@ import type { AttachmentRow } from "@/shared/database";
 import type { ChatMessage } from "../chat-reducer";
 import { Linkified } from "../linkify";
 import { downloadUrl, useSignedUrl } from "../signed-urls";
+import { VideoNote, VoiceNote } from "./note-content";
 
 export function formatBytes(n: number) {
   if (n < 1024) return `${n} B`;
@@ -88,6 +89,10 @@ export function MessageContent({
       return <ImageContent message={message} attachment={attachment} onOpen={() => onOpenImage(message.id)} />;
     case "file":
       return <FileContent message={message} attachment={attachment} />;
+    case "voice":
+      return <VoiceNote message={message} attachment={attachment} />;
+    case "video":
+      return <VideoNote message={message} attachment={attachment} />;
   }
 }
 

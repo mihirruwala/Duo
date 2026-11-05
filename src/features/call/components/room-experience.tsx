@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ChatProvider, useMaybeChat, type Person } from "@/features/chat/chat-provider";
 import { usePresenceAlerts } from "@/features/presence/use-presence-alerts";
 import { ChatDock } from "@/features/chat/components/chat-dock";
+import { ListsProvider } from "@/features/lists/lists-provider";
 import { FEATURES } from "@/shared/features";
 import { callTokenResponseSchema, type CallTokenResponse } from "@/shared/call";
 import type { DevicePrefs } from "../device-prefs";
@@ -49,8 +50,10 @@ export function RoomExperience({ slug, roomId, roomName, me, partner, gifsEnable
   if (!FEATURES.chat) return content;
   return (
     <ChatProvider roomId={roomId} slug={slug} me={me} partner={partner}>
-      {content}
-      <ChatDock roomId={roomId} gifsEnabled={gifsEnabled} />
+      <ListsProvider roomId={roomId}>
+        {content}
+        <ChatDock roomId={roomId} gifsEnabled={gifsEnabled} />
+      </ListsProvider>
     </ChatProvider>
   );
 }

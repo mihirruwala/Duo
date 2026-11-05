@@ -2,6 +2,7 @@
 
 import {
   Camera,
+  Clapperboard,
   Ellipsis,
   MonitorUp,
   MonitorX,
@@ -9,6 +10,7 @@ import {
   MicOff,
   MousePointerClick,
   PhoneOff,
+  Popcorn,
   SmilePlus,
   Sparkles,
   Video,
@@ -78,10 +80,14 @@ export function CallControls({
   onToggleCam,
   onToggleShare,
   onShareControllable,
+  onShareWatch,
   onOpenStudio,
   effectsOn,
   onReact,
   onPhotoBooth,
+  onWatch,
+  watching,
+  watchBlockedBy,
   onLeave,
 }: {
   micOn: boolean;
@@ -95,13 +101,21 @@ export function CallControls({
   onToggleShare: () => void;
   /** Present when remote control is available: share a tab through the DUO extension. */
   onShareControllable?: () => void;
+  /** Share a tab playing a show: smooth video with its sound. */
+  onShareWatch?: () => void;
   /** Present when DUO Studio is available. */
   onOpenStudio?: () => void;
   effectsOn?: boolean;
   onReact?: (emoji: (typeof CALL_REACTIONS)[number]) => void;
   onPhotoBooth?: () => void;
+  /** Start (or, while watching, change) Watch Together. */
+  onWatch?: () => void;
+  watching?: boolean;
+  /** Set while a screen share is on: why Watch Together can't start. */
+  watchBlockedBy?: string | null;
   onLeave: () => void;
 }) {
+  const watchLabel = watchBlockedBy ?? (watching ? "Change video" : "Watch together");
   return (
     <nav
       aria-label="Call controls"
@@ -134,7 +148,7 @@ export function CallControls({
         </span>
       </span>
       {canShare &&
-        (sharing || shareBlockedBy || !onShareControllable ? (
+        (sharing || shareBlockedBy || (!onShareControllable && !onShareWatch) ? (
           <Control
             label={shareBlockedBy ? `${shareBlockedBy} is sharing` : sharing ? "Stop sharing" : "Share screen"}
             tone={sharing ? "accent" : "neutral"}
@@ -160,19 +174,43 @@ export function CallControls({
                   <span className="block text-xs text-muted-foreground">They can watch, not control.</span>
                 </span>
               </DropdownMenuItem>
-              <DropdownMenuItem onSelect={onShareControllable} className="items-start gap-3 py-2.5">
-                <MousePointerClick className="mt-0.5 text-coral" />
-                <span>
-                  <span className="block font-semibold">Share a tab they can control</span>
-                  <span className="block text-xs text-muted-foreground">
-                    Uses the DUO Control extension. You approve every session.
+              {onShareWatch && (
+                <DropdownMenuItem onSelect={onShareWatch} className="items-start gap-3 py-2.5">
+                  <Popcorn className="mt-0.5 text-coral" />
+                  <span>
+                    <span className="block font-semibold">Watch mode: share a show</span>
+                    <span className="block text-xs text-muted-foreground">
+                      Smooth video with sound, for a tab playing a show or film.
+                    </span>
                   </span>
-                </span>
-              </DropdownMenuItem>
+                </DropdownMenuItem>
+              )}
+              {onShareControllable && (
+                <DropdownMenuItem onSelect={onShareControllable} className="items-start gap-3 py-2.5">
+                  <MousePointerClick className="mt-0.5 text-coral" />
+                  <span>
+                    <span className="block font-semibold">Share a tab they can control</span>
+                    <span className="block text-xs text-muted-foreground">
+                      Uses the DUO Control extension. You approve every session.
+                    </span>
+                  </span>
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         ))}
       <span className="flex items-center gap-2 max-sm:hidden">
+        {onWatch && (
+          <Control
+            label={watchLabel}
+            tone={watching ? "accent" : "neutral"}
+            pressed={watching}
+            disabled={!!watchBlockedBy}
+            onClick={onWatch}
+          >
+            <Clapperboard />
+          </Control>
+        )}
         {onOpenStudio && (
           <Control label="Effects" tone={effectsOn ? "accent" : "neutral"} pressed={effectsOn} onClick={onOpenStudio}>
             <Sparkles />
@@ -207,7 +245,7 @@ export function CallControls({
           </Control>
         )}
       </span>
-      {(onOpenStudio || onReact || onPhotoBooth) && (
+      {(onOpenStudio || onReact || onPhotoBooth || onWatch) && (
         <span className="sm:hidden">
           <DropdownMenu>
             <DropdownMenuTrigger
@@ -230,6 +268,11 @@ export function CallControls({
                     </DropdownMenuItem>
                   ))}
                 </div>
+              )}
+              {onWatch && (
+                <DropdownMenuItem onSelect={onWatch} disabled={!!watchBlockedBy}>
+                  <Clapperboard /> {watchLabel}
+                </DropdownMenuItem>
               )}
               {onOpenStudio && (
                 <DropdownMenuItem onSelect={onOpenStudio}>

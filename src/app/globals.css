@@ -186,6 +186,44 @@
   border: 1px solid oklch(1 0 0 / 9%);
 }
 
+/* In-call stage. Children keep their place in the DOM across layouts (so an embedded player or a
+   video element never remounts); only their grid area changes. */
+.duo-stage {
+  position: relative;
+  display: grid;
+  min-height: 0;
+  flex: 1 1 0%;
+  gap: 0.75rem;
+}
+.duo-stage[data-layout="duo"] {
+  grid-template-areas: "a" "b";
+  grid-template-columns: minmax(0, 1fr);
+  align-content: center;
+}
+.duo-stage[data-layout="solo"] {
+  grid-template-areas: "main";
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+}
+.duo-stage[data-layout="side"] {
+  grid-template-areas: "main main" "t1 t2";
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto;
+}
+@media (width >= 48rem) {
+  .duo-stage[data-layout="duo"] {
+    grid-template-areas: "a b";
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+@media (width >= 64rem) {
+  .duo-stage[data-layout="side"] {
+    grid-template-areas: "main t1" "main t2" "main .";
+    grid-template-columns: minmax(0, 1fr) 15rem;
+    grid-template-rows: auto auto minmax(0, 1fr);
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

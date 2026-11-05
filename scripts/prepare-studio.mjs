@@ -23,7 +23,10 @@ for (const f of readdirSync(wasmSrc)) {
 
 // LiveKit's end-to-end encryption worker (classic script), self-hosted for the same CSP reason.
 mkdirSync(join(root, "public/livekit"), { recursive: true });
-copyFileSync(join(root, "node_modules/livekit-client/dist/livekit-client.e2ee.worker.js"), join(root, "public/livekit/e2ee-worker.js"));
+copyFileSync(
+  join(root, "node_modules/livekit-client/dist/livekit-client.e2ee.worker.js"),
+  join(root, "public/livekit/e2ee-worker.js"),
+);
 
 await build({
   entryPoints: [join(root, "src/features/studio/worker/studio.worker.ts")],

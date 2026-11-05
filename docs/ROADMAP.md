@@ -28,6 +28,17 @@ _Written 2026-10-31, after M1–M4 shipped to production. Ordered by value ÷ ef
 | 6    | **M6 hardening**: accessibility pass, phone layouts for the call, error boundaries, storage cleanup on room delete, security write-up, optional end-to-end encryption (LiveKit E2EE) | Required for v1                                                  | L                    |
 | 7    | **Ops**: separate production Supabase project, custom SMTP, Realtime public access off                                                                                               | Data hygiene                                                     | S (mostly dashboard) |
 
+## Round 2 (2026-11-05): from researching how long-distance couples use calls
+
+| #     | Item                                                                                                      | Why                                                                                                                   |
+| ----- | --------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| 8 ✅  | **Pin / spotlight** your person (or yourself, or the shared content) in the call; tap a thumbnail to swap | The most-requested missing basic; during a share their face was stuck in a thumbnail                                  |
+| 9 ✅  | **Watch Together**: synced YouTube inside the call                                                        | The #1 couples activity; screen-sharing Netflix etc. shows a black screen (DRM) and pipes film audio through the call |
+| 10 ✅ | **Voice and video notes** in chat                                                                         | Time zones: something to wake up to                                                                                   |
+| 11 ✅ | **Shared lists** (films, places, dates…), live for both, with "Watch" on YouTube links during a call      | The shared to-do of a couple; ties into Watch Together                                                                |
+| 12    | **Hang-out mode**: low-bandwidth open line for hours (360p, Studio off, sleep mode)                       | "Parallel presence" is how couples actually use calls                                                                 |
+| 13    | Watch Together for any site via the extension (Netflix etc. with each person's own account)               | Needs host permissions, so it's a separate, deliberate decision                                                       |
+
 ## DUO Studio technical plan (item 1)
 
 - **Pipeline (all off the main thread):** camera track → `MediaStreamTrackProcessor` → transferable stream to a Worker

@@ -10,10 +10,10 @@ let userSeq = 0;
  * CI can't click, so we return an animated canvas stream. Streams are kept on window so a
  * test can end them exactly like the browser's native "Stop sharing" button does.
  */
-export const FAKE_DISPLAY_MEDIA = () => {
+export const FAKE_DISPLAY_MEDIA = (withAudio = false) => {
   const w = window as unknown as { __duoDisplayStreams: MediaStream[] };
   w.__duoDisplayStreams = [];
-  navigator.mediaDevices.getDisplayMedia = async () => {
+  navigator.mediaDevices.getDisplayMedia = async (constraints?: DisplayMediaStreamOptions) => {
     const canvas = document.createElement("canvas");
     canvas.width = 1280;
     canvas.height = 720;
@@ -29,6 +29,16 @@ export const FAKE_DISPLAY_MEDIA = () => {
     };
     draw();
     const stream = canvas.captureStream(15);
+    // "Also share tab audio": a steady tone, like a show's soundtrack.
+    if (withAudio && constraints?.audio) {
+      const ctx = new AudioContext();
+      const osc = ctx.createOscillator();
+      const dest = ctx.createMediaStreamDestination();
+      osc.frequency.value = 440;
+      osc.connect(dest);
+      osc.start();
+      for (const t of dest.stream.getAudioTracks()) stream.addTrack(t);
+    }
     w.__duoDisplayStreams.push(stream);
     return stream;
   };
@@ -42,10 +52,14 @@ export function emailOf(page: Page): string {
   return e;
 }
 
-export async function newUserPage(browser: Browser, name: string, opts: { fakeDisplay?: boolean } = {}): Promise<Page> {
+export async function newUserPage(
+  browser: Browser,
+  name: string,
+  opts: { fakeDisplay?: boolean; fakeDisplayAudio?: boolean } = {},
+): Promise<Page> {
   const context = await browser.newContext({ permissions: ["camera", "microphone"] });
   openContexts.add(context);
-  if (opts.fakeDisplay) await context.addInitScript(FAKE_DISPLAY_MEDIA);
+  if (opts.fakeDisplay) await context.addInitScript(FAKE_DISPLAY_MEDIA, !!opts.fakeDisplayAudio);
   const page = await context.newPage();
   await signUpOn(page, name);
   return page;

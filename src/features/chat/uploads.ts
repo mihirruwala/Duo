@@ -1,13 +1,15 @@
 "use client";
 
 import { publicEnv } from "@/lib/env";
-import { ALLOWED_UPLOAD_TYPES, MAX_UPLOAD_BYTES, uploadResponseSchema, type UploadResponse } from "@/shared/chat";
+import { ALLOWED_UPLOAD_TYPES, MAX_UPLOAD_BYTES, NOTE_TYPES, uploadResponseSchema, type UploadResponse } from "@/shared/chat";
 
 export class UploadError extends Error {}
 
 /** Client-side checks first (fast feedback); the server route and the bucket enforce them again. */
-export function validateFile(file: File): string | null {
-  if (!(file.type in ALLOWED_UPLOAD_TYPES))
+export function validateFile(file: File, opts: { note?: boolean } = {}): string | null {
+  if (opts.note) {
+    if (!(file.type in NOTE_TYPES)) return "This browser recorded a format DUO can't store.";
+  } else if (!(file.type in ALLOWED_UPLOAD_TYPES))
     return `${file.name || "That file"} isn't a supported type (images, PDF, text, ZIP, Office).`;
   if (file.size > MAX_UPLOAD_BYTES) return `${file.name} is larger than 25 MB.`;
   if (file.size === 0) return `${file.name} is empty.`;

@@ -1,6 +1,7 @@
 /**
  * Content-Security-Policy builder. Scripts are locked to a per-request nonce with
- * 'strict-dynamic'; 'wasm-unsafe-eval' is required for MediaPipe's WASM runtime.
+ * 'strict-dynamic'; 'wasm-unsafe-eval' is required for MediaPipe's WASM runtime. YouTube's player
+ * API script (Watch Together) is added by our own code, so 'strict-dynamic' admits it.
  * style-src allows inline styles because Radix/LiveKit set style attributes; styles
  * cannot execute script, so the XSS surface stays closed.
  */
@@ -41,7 +42,8 @@ export function buildCsp(nonce: string, opts: { isDev: boolean }): string {
     "font-src": ["'self'"],
     "connect-src": [...connect],
     "worker-src": ["'self'", "blob:"],
-    "frame-src": ["'none'"],
+    // Watch Together: YouTube's player frame (privacy-enhanced host). Nothing else may be framed.
+    "frame-src": ["https://www.youtube-nocookie.com", "https://www.youtube.com"],
     "object-src": ["'none'"],
     "base-uri": ["'self'"],
     "form-action": ["'self'"],

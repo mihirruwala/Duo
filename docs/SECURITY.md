@@ -43,7 +43,10 @@ Chat isn't end-to-end encrypted. A compromised device belonging to a member is o
 - Rate limits enforced **inside Postgres** (room creation, invites, messages, reactions, control requests), so they
   can't be bypassed by calling the API directly; server routes add limits for media tokens, uploads, GIF search and
   account deletion.
-- _Tests:_ 58 PGlite tests run the real migrations with Supabase's role/grant model, and policies are mutation-checked
+- **Shared lists** follow the same model: members-only RLS on `lists` and `list_items`; an item's `room_id` comes from
+  its list (not insertable by clients); `created_by`, `done_by` and timestamps are stamped by triggers; DB rate limit,
+  50 lists per room and 500 items per list.
+- _Tests:_ 70 PGlite tests run the real migrations with Supabase's role/grant model, and policies are mutation-checked
   (weakening one fails a test). `tests/e2e/chat.spec.ts` repeats the outsider checks against the live API.
 
 ### Realtime
@@ -55,7 +58,8 @@ Chat isn't end-to-end encrypted. A compromised device belonging to a member is o
 
 ### Files
 
-- Private bucket, 25 MB cap, MIME allow-list without SVG/HTML; storage RLS: members only, own room folder, exact path
+- Private bucket, 25 MB cap, MIME allow-list without SVG/HTML (audio/video only for recorded voice and video notes,
+  enforced by `send_attachment_message`: a note's type must match its kind and it must carry a sane duration); storage RLS: members only, own room folder, exact path
   shape, uploader-only delete. Names sanitized (path, control and bidi characters stripped). Signed URLs expire in 5 min.
 - Files are served from Supabase's domain, never DUO's origin, so even a mislabelled file can't script DUO.
 - Room deletion and account deletion remove the stored files through the Storage API.
@@ -86,7 +90,10 @@ Chat isn't end-to-end encrypted. A compromised device belonging to a member is o
 
 - **CSP:** per-request nonce with `strict-dynamic`; `frame-ancestors 'none'`, `object-src 'none'`, `base-uri 'self'`,
   `form-action 'self'`; all WASM, workers, models and art self-hosted; only GIPHY media and the Supabase/LiveKit
-  origins allowed remotely. Plus HSTS (preload), `nosniff`, `X-Frame-Options: DENY`, COOP, a tight Permissions-Policy.
+  origins allowed remotely. The only frames allowed are YouTube's player (`frame-src` youtube-nocookie.com / youtube.com)
+  for Watch Together; its API script is added by our own code, so `strict-dynamic` admits it without widening
+  `script-src`. The player runs cross-origin and gets nothing from DUO: sync messages are LiveKit data packets,
+  schema-validated (11-character video id, bounded numbers, 512-byte cap) before they touch the player. Plus HSTS (preload), `nosniff`, `X-Frame-Options: DENY`, COOP, a tight Permissions-Policy.
 - **CSRF:** cookie-authenticated routes require `Sec-Fetch-Site: same-origin` (or a matching `Origin`).
 - **XSS:** user content is always React text; links only for `http(s)` with `rel="noopener noreferrer nofollow ugc"`.
 - **Secrets:** only in env vars (Vercel: stored as secrets); `server-only` modules fail the build if imported client-side;

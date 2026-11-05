@@ -1,17 +1,18 @@
 # DUO: Progress
 
-_Last updated: 2026-10-31_
+_Last updated: 2026-11-05_
 
 ## Milestone status
 
-| Milestone              | Status                                                 |
-| ---------------------- | ------------------------------------------------------ |
-| M1 Foundation          | **✅ Complete. Gate verified against hosted Supabase** |
-| M2 Core video          | Not started                                            |
-| M3 Chat                | Not started                                            |
-| M4 Remote control      | Not started                                            |
-| M5 DUO Studio          | Not started                                            |
-| M6 Hardening & release | Not started                                            |
+| Milestone              | Status                                                          |
+| ---------------------- | --------------------------------------------------------------- |
+| M1 Foundation          | **✅ Complete. Gate verified against hosted Supabase**          |
+| M2 Core video          | ✅ Complete (gate verified on LiveKit Cloud)                    |
+| M3 Chat                | ✅ Complete                                                     |
+| M4 Remote control      | ✅ Complete                                                     |
+| M5 DUO Studio          | ✅ Complete                                                     |
+| M6 Hardening & release | ✅ Complete (ops items in ROADMAP #7 remain)                    |
+| Round 2                | Pin, Watch Together, voice/video notes, shared lists. See below |
 
 ## M1: completed
 
@@ -229,6 +230,46 @@ verified by unit tests (geometry) plus the manual checklist, not by E2E.
 - Call controls overflowed off-screen on phones and the chat launcher covered them.
 - axe: decorative logo SVGs announced as unnamed images; link/button names didn't include visible text; unnamed slider
   thumbs; `aria-label` on a role-less span.
+
+## Round 2 (2026-11-05): pin, Watch Together, notes, shared lists
+
+| Item                | What shipped                                                                                                                                                                                                                                                                                                                                                                             | Verified by                                                                                                                                                                                                                            |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Pin / spotlight     | Pin button on every camera tile (and double-click): pinned person fills the stage, the other floats in a corner; tap a small tile to swap; during a screen share or Watch Together the pinned face is big and the content becomes a live thumbnail. Remembered per device. Layout is one grid whose children never remount, so videos and the YouTube player don't reload on a swap.     | `pin-watch.spec.ts` (pin, swap, persist across rejoin, pin over a live share, double-click)                                                                                                                                            |
+| Watch Together      | Paste a YouTube link (watch, youtu.be, shorts, live, embed, `t=`); both play it locally in a youtube-nocookie frame. Sync over LiveKit data: whoever acts drives, heartbeats every 4 s, followers correct >1 s drift, seeks while paused detected, late joiners catch up, "Join playback" if autoplay is blocked. Either can change or end it; sharing a screen ends it. Headphones tip. | `pin-watch.spec.ts` against real YouTube (start, pause → other pauses within 1.5 s, other seeks to 2:00 → follows, thumbnail keeps playing, end for both); `watch.test.ts` (link parsing, message validation, driver/drift/echo rules) |
+| Voice & video notes | Mic button in the composer (when empty); Video note in the attach menu with a live preview. MediaRecorder (webm/opus, mp4 on Safari), 5 min / 1 min limits, live level meter, waveform stored with the message, 1×/1.5×/2× playback, one note plays at a time. New message kinds `voice`/`video`; the RPC checks type ↔ kind, duration and waveform.                                     | `lists-notes.test.ts` (RPC rules, bucket/CHECK types), `notes-lists.test.ts` (waveform, format picking), `lists-notes.spec.ts` (record → other person plays it, discard, devices released)                                             |
+| Shared lists        | "Lists" tab in the dock: templates, emoji, rename, delete (confirm), add / tick off / edit / delete items, "Added by" / "Done by", done section. Live via the room's private channel. YouTube links show **Watch** during a call.                                                                                                                                                        | `lists-notes.test.ts` (RLS, outsider, room_id from list, stamps, limits, cascade + broadcast), `lists-notes.spec.ts` (two people, live, reload)                                                                                        |
+
+Migrations: `20261105000100_note_kinds.sql`, `20261105000200_voice_video_notes.sql`, `20261105000300_shared_lists.sql`.
+
+### Bugs found and fixed in this round
+
+- Double-clicking a small tile swapped it in and then immediately swapped back: the layout moves under the pointer, so
+  the second click landed on whatever slid into place. Only the first click of a multi-click now counts.
+- **Found on production, not locally:** a buffering stall made playback fall behind the clock, which the sync read as a
+  seek; the stalled side took over as driver and the other person's pause, landing in the short "ignore the echo"
+  window, was dropped. Now only a jump ahead or backwards counts as a seek, and the echo window ignores only the state
+  we just applied. Unit tests for both.
+- Gabe could get the "started Watch Together" toast twice (the start and a catch-up reply arrive together). One toast per session.
+- YouTube sometimes shows one person a pre-roll ad. The film starts for them after it, and the other person is brought
+  back to the same point. The E2E test now waits for YouTube's own "playing" state (`data-player-state`), not the ad's video.
+
+### Watch mode and fullscreen (2026-11-05, from user testing)
+
+- **Fullscreen fixed:** YouTube's own fullscreen button was blocked by our `Permissions-Policy` (now delegated to the
+  YouTube frame only); DUO's fullscreen button only entered fullscreen, now it toggles (and follows Esc). In fullscreen
+  (Watch Together or a share), your person's camera stays in a corner.
+- **Watch mode** (Share → "Watch mode: share a show"): for shows on sites other than YouTube. Shares a Chrome tab tuned
+  for motion: 1080p30, 6 Mbps, a 720p layer for weak links, framerate kept over resolution, stereo music-quality tab
+  audio with no voice processing. DUO stays in front (CaptureController) so the sharer can pop out their person's face
+  before switching to the show tab. Viewers get the show big (it takes over from a pin), a separate show-volume slider,
+  and fullscreen with their person's face. Warns when no sound is shared (window picked instead of a tab). Offered from
+  the Watch together dialog for non-YouTube links. Limits: DRM sites (Netflix, Disney+…) show black; quality follows
+  the sharer's upload; the sharer's mic picks up speakers (headphones tip).
+- _Verified:_ `pin-watch.spec.ts` (Watch mode with tab audio: pin gives way, label, video + separate sound track +
+  decoded audio, fullscreen with partner, stop; Watch Together fullscreen both ways + frame fullscreen allowed).
+
+Deployed 2026-11-05 to https://duo-virid-eta.vercel.app; the new specs, call and smoke suites pass against production.
 
 ## Deployment (2026-10-31)
 

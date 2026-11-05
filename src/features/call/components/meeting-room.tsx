@@ -21,7 +21,9 @@ import {
   RoomEvent,
   ScreenSharePresets,
   Track,
+  VideoPreset,
   VideoPresets,
+  AudioPresets,
   ExternalE2EEKeyProvider,
   type LocalVideoTrack,
   type RemoteParticipant,
@@ -44,7 +46,12 @@ import { isStudioActive } from "@/shared/studio";
 import { CallFunOverlay, useCallFun } from "../fun/call-fun";
 import { CallPip, pipSupported, useCallPip } from "../pip/call-pip";
 import { CallControls } from "./call-controls";
-import { ParticipantTile } from "./participant-tile";
+import { CallStage, useCallPin, type StageContent } from "./call-stage";
+import { useWatchTogether } from "../watch/use-watch-together";
+import { WatchDialog } from "../watch/watch-dialog";
+import { WatchStage } from "../watch/watch-stage";
+import { WATCH_SHARE_TRACK } from "@/shared/watch";
+import { useAnnounceCall, useWatchSuggestions, WATCH_EVENT, type WatchRequest } from "../watch/watch-events";
 import { ScreenShareStage } from "./screen-share-stage";
 
 export type LeaveReason = { kind: "left" } | { kind: "duplicate" } | { kind: "removed" } | { kind: "failed"; message: string };
@@ -245,6 +252,11 @@ function CallLayout({ roomName, partnerName, onLeave }: { roomName: string; part
   const control = useControl();
   const pip = useCallPip();
   const fun = useCallFun();
+  const [pin, setPin] = useCallPin();
+  const watch = useWatchTogether();
+  const [watchDialog, setWatchDialog] = useState(false);
+  const watchSuggestions = useWatchSuggestions();
+  useAnnounceCall();
 
   const tracks = useTracks(
     [
@@ -276,6 +288,8 @@ function CallLayout({ roomName, partnerName, onLeave }: { roomName: string; part
   async function toggleShare() {
     // A tab shared through the extension is stopped via the control layer (it also tells the extension).
     if (isScreenShareEnabled && control.sharingControllable) return control.stopControllableShare();
+    // One thing on the big screen at a time: sharing ends Watch Together.
+    if (!isScreenShareEnabled && watch.session) watch.close();
     try {
       await localParticipant.setScreenShareEnabled(!isScreenShareEnabled, {
         audio: true,
@@ -285,6 +299,71 @@ function CallLayout({ roomName, partnerName, onLeave }: { roomName: string; part
         contentHint: "detail",
         resolution: { width: 1920, height: 1080, frameRate: 15 },
       });
+    } catch (err) {
+      if (!isUserCancel(err)) toast.error(describeMediaError(err, "screen"));
+    }
+  }
+
+  // "Watch now" on a YouTube link in a shared list.
+  const onWatchRequest = useEffectEvent((req: WatchRequest) => {
+    if (share) return void toast.error("Stop the screen share first, then start Watch Together.");
+    watch.open(req.videoId, req.start);
+  });
+  useEffect(() => {
+    const handler = (e: Event) => onWatchRequest((e as CustomEvent<WatchRequest>).detail);
+    window.addEventListener(WATCH_EVENT, handler);
+    return () => window.removeEventListener(WATCH_EVENT, handler);
+  }, []);
+
+  /**
+   * Watch mode: share a tab playing a show. Tuned for motion (30 fps, high bitrate, stereo sound
+   * straight from the tab) rather than for crisp text like a normal screen share.
+   */
+  async function startWatchShare() {
+    if (watch.session) watch.close();
+    // Chrome normally jumps to the shared tab; stay here so the sharer can pop out their person's
+    // face first (that needs a click on this page), then switch to the show.
+    let controller: { setFocusBehavior?: (b: string) => void } | undefined;
+    const Ctor = (window as unknown as { CaptureController?: new () => { setFocusBehavior?: (b: string) => void } })
+      .CaptureController;
+    if (Ctor) {
+      controller = new Ctor();
+      try {
+        controller.setFocusBehavior?.("no-focus-change");
+      } catch {
+        // Older Chrome: it switches tabs, the sharer can still use Pop out from the header.
+      }
+    }
+    try {
+      await localParticipant.setScreenShareEnabled(
+        true,
+        {
+          audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 2 },
+          video: { displaySurface: "browser" },
+          systemAudio: "include",
+          selfBrowserSurface: "exclude",
+          surfaceSwitching: "include",
+          contentHint: "motion",
+          resolution: { width: 1920, height: 1080, frameRate: 30 },
+          ...(controller ? { controller } : {}),
+        },
+        {
+          name: WATCH_SHARE_TRACK,
+          screenShareEncoding: { maxBitrate: 6_000_000, maxFramerate: 30, priority: "high" },
+          screenShareSimulcastLayers: [new VideoPreset(1280, 720, 2_000_000, 30)],
+          degradationPreference: "maintain-framerate",
+          audioPreset: AudioPresets.musicHighQualityStereo,
+          dtx: false,
+          forceStereo: true,
+        },
+      );
+      setPin(null); // the show takes the big spot
+      if (!localParticipant.getTrackPublication(Track.Source.ScreenShareAudio)) {
+        toast.warning("No sound is being shared", {
+          description: "Pick a Chrome tab (not a window) and keep “Also share tab audio” on.",
+          duration: 10_000,
+        });
+      }
     } catch (err) {
       if (!isUserCancel(err)) toast.error(describeMediaError(err, "screen"));
     }
@@ -306,6 +385,64 @@ function CallLayout({ roomName, partnerName, onLeave }: { roomName: string; part
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, []);
+
+  // When a show starts (Watch Together or a Watch-mode share), it takes the big spot, even if a
+  // person was pinned. Pinning again afterwards works as usual.
+  const watchingKey =
+    share && share.publication.trackName === WATCH_SHARE_TRACK
+      ? `share:${share.publication.trackSid}`
+      : !share && watch.session
+        ? `watch:${watch.session.id}`
+        : null;
+  useEffect(() => {
+    if (watchingKey) setPin(null);
+  }, [watchingKey, setPin]);
+
+  const stageContent: StageContent | null = share
+    ? {
+        key: `share:${share.publication.trackSid}`,
+        render: ({ compact, style, onActivate }) => (
+          <ScreenShareStage
+            trackRef={share}
+            compact={compact}
+            style={style}
+            onActivate={onActivate}
+            onStopLocal={() => void toggleShare()}
+            localTitle={control.sharingControllable ? control.sharedTabTitle : null}
+            watchMode={share.publication.trackName === WATCH_SHARE_TRACK}
+            partnerName={partnerName}
+            onPopOut={pipSupported() && !pip.pipWindow ? () => void pip.open() : undefined}
+            renderOverlay={(container) =>
+              FEATURES.remoteControl && !share.participant.isLocal && share.publication.trackName === CONTROLLABLE_TRACK_NAME ? (
+                <>
+                  {control.control.phase === "active" && control.control.role === "controller" && (
+                    <InputCapture
+                      videoContainer={container}
+                      onInput={control.sendInput}
+                      name={share.participant.name || "your person"}
+                    />
+                  )}
+                  <ControllerBar ownerName={share.participant.name || "Your person"} />
+                </>
+              ) : null
+            }
+          />
+        ),
+      }
+    : watch.session
+      ? {
+          key: `watch:${watch.session.id}`,
+          render: ({ compact, style, onActivate }) => (
+            <WatchStage
+              watch={watch}
+              compact={compact}
+              style={style}
+              onActivate={onActivate}
+              onChangeVideo={() => setWatchDialog(true)}
+            />
+          ),
+        }
+      : null;
 
   const reconnecting = state === ConnectionState.Reconnecting || state === ConnectionState.SignalReconnecting;
   const shareBlockedBy = share && !share.participant.isLocal ? share.participant.name || "Your person" : null;
@@ -364,52 +501,14 @@ function CallLayout({ roomName, partnerName, onLeave }: { roomName: string; part
       )}
 
       <main className="flex min-h-0 flex-1 flex-col gap-3 p-4 sm:p-6">
-        {share ? (
-          <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[1fr_15rem]">
-            <ScreenShareStage
-              trackRef={share}
-              onStopLocal={() => void toggleShare()}
-              localTitle={control.sharingControllable ? control.sharedTabTitle : null}
-              renderOverlay={(container) =>
-                FEATURES.remoteControl &&
-                !share.participant.isLocal &&
-                share.publication.trackName === CONTROLLABLE_TRACK_NAME ? (
-                  <>
-                    {control.control.phase === "active" && control.control.role === "controller" && (
-                      <InputCapture
-                        videoContainer={container}
-                        onInput={control.sendInput}
-                        name={share.participant.name || "your person"}
-                      />
-                    )}
-                    <ControllerBar ownerName={share.participant.name || "Your person"} />
-                  </>
-                ) : null
-              }
-            />
-            <div className="flex gap-3 lg:flex-col" aria-label="Cameras">
-              {[remoteCam, localCam].map((t) =>
-                t ? (
-                  <ParticipantTile
-                    key={t.participant.identity}
-                    trackRef={t}
-                    variant="thumb"
-                    className="aspect-video w-40 shrink-0 lg:w-full"
-                  />
-                ) : null,
-              )}
-            </div>
-          </div>
-        ) : (
-          <div className={cn("grid min-h-0 flex-1 content-center gap-3", "md:grid-cols-2")}>
-            {localCam && <ParticipantTile trackRef={localCam} className="aspect-video max-h-full w-full" />}
-            {remoteCam ? (
-              <ParticipantTile trackRef={remoteCam} className="aspect-video max-h-full w-full" />
-            ) : (
-              <WaitingTile partnerName={partnerName} left={partnerLeft && !remote} />
-            )}
-          </div>
-        )}
+        <CallStage
+          localCam={localCam}
+          remoteCam={remoteCam}
+          waiting={<WaitingTile partnerName={partnerName} left={partnerLeft && !remote} />}
+          pin={pin}
+          onPin={setPin}
+          content={stageContent}
+        />
       </main>
 
       <footer className="flex justify-center px-4 pb-5">
@@ -423,11 +522,13 @@ function CallLayout({ roomName, partnerName, onLeave }: { roomName: string; part
           onToggleMic={() => void toggleMic()}
           onToggleCam={() => void toggleCam()}
           onToggleShare={() => void toggleShare()}
+          onShareWatch={() => void startWatchShare()}
           onShareControllable={
             FEATURES.remoteControl
               ? () => {
                   // You're about to switch tabs: keep your person and Revoke visible on top.
                   void pip.open();
+                  if (watch.session) watch.close();
                   control.startControllableShare();
                 }
               : undefined
@@ -436,9 +537,20 @@ function CallLayout({ roomName, partnerName, onLeave }: { roomName: string; part
           effectsOn={isStudioActive(studio.config)}
           onReact={fun.react}
           onPhotoBooth={fun.canBooth ? fun.startBooth : undefined}
+          onWatch={() => setWatchDialog(true)}
+          watching={!!watch.session}
+          watchBlockedBy={share ? "Stop the screen share to watch together" : null}
           onLeave={onLeave}
         />
       </footer>
+      <WatchDialog
+        open={watchDialog}
+        onOpenChange={setWatchDialog}
+        changing={!!watch.session}
+        suggestions={watchSuggestions}
+        onStart={(videoId, start) => watch.open(videoId, start)}
+        onShareTab={share ? undefined : () => void startWatchShare()}
+      />
       <CallPip pipWindow={pip.pipWindow} />
       <CallFunOverlay fun={fun} />
       {FEATURES.studio && <StudioPanel open={studioOpen} onOpenChange={setStudioOpen} track={cameraVideo} stats={studio.stats} />}

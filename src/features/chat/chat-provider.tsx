@@ -3,7 +3,7 @@
 import { createContext, use, useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } from "react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { getBrowserClient } from "@/lib/supabase/client";
-import type { Gif, StickerId } from "@/shared/chat";
+import { noteMetaSchema, type Gif, type StickerId } from "@/shared/chat";
 import type { AttachmentRow, MessageKind, MessageRow, MomentRow, ReactionRow, ReceiptRow } from "@/shared/database";
 import { friendlyError } from "@/shared/errors";
 import { KNOCK_COOLDOWN_MS, KNOCK_EVENT, OFFLINE, partnerPresenceFrom, type PartnerPresence } from "@/shared/presence";
@@ -15,6 +15,13 @@ const TYPING_THROTTLE_MS = 1500;
 const TYPING_TTL_MS = 4000;
 
 export type Person = { id: string; name: string; hue: number };
+export type RecordedNote = { file: File; kind: "voice" | "video"; durationMs: number; waveform?: number[] };
+export type RoomChangeListener = (
+  table: string,
+  op: string,
+  record: Record<string, unknown> | null,
+  old: Record<string, unknown> | null,
+) => void;
 
 type ChatApi = {
   state: ChatState;
@@ -30,6 +37,8 @@ type ChatApi = {
   /** Ping the other person ("I'm here, join me?"). Returns false while cooling down. */
   knock: () => boolean;
   onKnock: (listener: () => void) => () => void;
+  /** Row changes for tables chat doesn't own (e.g. shared lists), from the same private room channel. */
+  onRoomChange: (listener: RoomChangeListener) => () => void;
   connected: boolean;
   unread: number;
   /** Partner's watermark, for Sent / Delivered / Read on my messages. */
@@ -40,6 +49,8 @@ type ChatApi = {
   sendFiles: (files: File[], replyTo: string | null) => string | null;
   /** Send one image and resolve with its message id once stored (null on failure). Optionally save it to Moments. */
   sendPhoto: (file: File, opts?: { saveToMoments?: boolean }) => Promise<string | null>;
+  /** A recorded voice or video note. Returns an error message, or null once it's queued. */
+  sendNote: (note: RecordedNote, replyTo: string | null) => string | null;
   retry: (id: string) => void;
   edit: (id: string, body: string) => Promise<string | null>;
   remove: (id: string) => Promise<string | null>;
@@ -124,6 +135,7 @@ export function ChatProvider({
   const inCallRef = useRef(false);
   const lastKnockSent = useRef(0);
   const knockListeners = useRef(new Set<() => void>());
+  const roomChangeListeners = useRef(new Set<RoomChangeListener>());
   const [connected, setConnected] = useState(false);
   const [viewing, setViewing] = useState(false);
 
@@ -300,6 +312,7 @@ export function ChatProvider({
       const rec = (record ?? null) as Record<string, unknown> | null;
       const old = (oldRecord ?? null) as Record<string, unknown> | null;
       if (rec && rec.room_id !== roomId && old?.room_id !== roomId) return;
+      if (table && op) roomChangeListeners.current.forEach((l) => l(table, op, rec, old));
       switch (table) {
         case "messages":
           if (rec) dispatch({ type: "message", row: rec as unknown as MessageRow });
@@ -450,6 +463,8 @@ export function ChatProvider({
     async (msg: ChatMessage, file: File) => {
       try {
         const dims = await imageSize(file);
+        const note = msg.kind === "voice" || msg.kind === "video" ? noteMetaSchema.safeParse(msg.meta) : null;
+        if (note && !note.success) throw new Error("This recording is damaged. Record it again.");
         const target = await uploadFile(slug, file, (p) => dispatch({ type: "progress", id: msg.id, progress: p }));
         const { data, error } = await supabase().rpc("send_attachment_message", {
           p_room_id: roomId,
@@ -463,6 +478,7 @@ export function ChatProvider({
           p_file_name: target.fileName,
           p_width: dims?.width ?? null,
           p_height: dims?.height ?? null,
+          ...(note?.success ? { p_duration_ms: note.data.duration_ms, p_waveform: note.data.waveform ?? null } : {}),
         });
         if (error || !data) throw new Error(friendlyError(error, "Upload failed. Tap to retry."));
         dispatch({ type: "message", row: data });
@@ -522,6 +538,27 @@ export function ChatProvider({
     [roomId, me.id, runUpload],
   );
 
+  const sendNote = useCallback(
+    (note: RecordedNote, replyTo: string | null): string | null => {
+      const problem = validateFile(note.file, { note: true });
+      if (problem) return problem;
+      const msg = makeOptimistic(roomId, me.id, note.kind, null, replyTo, {
+        file_name: note.file.name,
+        mime_type: note.file.type,
+        size_bytes: note.file.size,
+        duration_ms: Math.round(note.durationMs),
+        ...(note.waveform ? { waveform: note.waveform } : {}),
+      });
+      msg.progress = 0;
+      msg.localPreview = URL.createObjectURL(note.file);
+      pendingFiles.current.set(msg.id, { file: note.file, replyTo });
+      dispatch({ type: "optimistic", message: msg });
+      void runUpload(msg, note.file);
+      return null;
+    },
+    [roomId, me.id, runUpload],
+  );
+
   const retry = useCallback(
     (id: string) => {
       const msg = stateRef.current.messages[id];
@@ -530,7 +567,7 @@ export function ChatProvider({
         ...msg,
         status: "sending",
         error: undefined,
-        progress: msg.kind === "image" || msg.kind === "file" ? 0 : undefined,
+        progress: ["image", "file", "voice", "video"].includes(msg.kind) ? 0 : undefined,
       };
       dispatch({ type: "optimistic", message: retrying });
       const pending = pendingFiles.current.get(id);
@@ -620,6 +657,13 @@ export function ChatProvider({
     };
   }, []);
 
+  const onRoomChange = useCallback((listener: RoomChangeListener) => {
+    roomChangeListeners.current.add(listener);
+    return () => {
+      roomChangeListeners.current.delete(listener);
+    };
+  }, []);
+
   const api: ChatApi = {
     state,
     messages,
@@ -632,6 +676,7 @@ export function ChatProvider({
     setInCall,
     knock,
     onKnock,
+    onRoomChange,
     connected,
     unread,
     partnerReceipt,
@@ -640,6 +685,7 @@ export function ChatProvider({
     sendSticker,
     sendFiles,
     sendPhoto,
+    sendNote,
     retry,
     edit,
     remove,
