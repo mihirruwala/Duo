@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { VideoTrack, type TrackReference } from "@livekit/components-react";
 import { Track, type Participant, type RemoteParticipant } from "livekit-client";
 import { Slider } from "@/components/ui/slider";
-import { Maximize2, MonitorUp, PictureInPicture2, Volume1, Volume2, VolumeX, X } from "lucide-react";
+import { Check, Maximize2, MonitorUp, Pause, PictureInPicture2, Volume1, Volume2, VolumeX, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FullscreenButton, FullscreenPartner, useFullscreen } from "./fullscreen";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,8 @@ export function ScreenShareStage({
   watchMode = false,
   partnerName,
   onPopOut,
+  onAskPause,
+  pauseAsk,
 }: {
   trackRef: TrackReference;
   onStopLocal: () => void;
@@ -38,6 +40,10 @@ export function ScreenShareStage({
   partnerName?: string | null;
   /** Sharer only: open the always-on-top window with their person's face before switching tabs. */
   onPopOut?: () => void;
+  /** Viewer of a Watch-mode share: ask the sharer to pause. Returns false while cooling down. */
+  onAskPause?: () => boolean;
+  /** Sharer: the viewer just asked to pause. */
+  pauseAsk?: { name: string } | null;
 }) {
   const [stage, setStage] = useState<HTMLDivElement | null>(null);
   const fullscreen = useFullscreen(stage);
@@ -65,7 +71,7 @@ export function ScreenShareStage({
         >
           <span className="flex items-center gap-1.5 rounded-full bg-black/50 px-2 py-0.5 text-xs font-semibold text-white backdrop-blur">
             <span className="size-1.5 animate-pulse rounded-full bg-danger" aria-hidden />
-            {isLocal ? "Your screen" : `${name}'s screen`}
+            {watchMode ? (isLocal ? "Your show" : `${name}'s show`) : isLocal ? "Your screen" : `${name}'s screen`}
             <Maximize2 className="size-3" aria-hidden />
           </span>
         </button>
@@ -83,12 +89,15 @@ export function ScreenShareStage({
           {isLocal
             ? localTitle
               ? `You are sharing “${localTitle}”`
-              : "You are sharing your screen"
+              : watchMode
+                ? "You're sharing a show 🍿"
+                : "You are sharing your screen"
             : watchMode
               ? `${name} is sharing a show 🍿`
               : `${name} is sharing their screen`}
         </span>
-        {!isLocal && watchMode && <ShowVolume participant={trackRef.participant} />}
+        {!isLocal && watchMode && onAskPause && <AskPause onAsk={onAskPause} sharer={name} />}
+        {!isLocal && watchMode && <ShowVolume participant={trackRef.participant} className={onAskPause ? "" : "ml-auto"} />}
         {!isLocal && (
           <span className={watchMode ? "" : "ml-auto"}>
             <FullscreenButton active={fullscreen.active} onToggle={fullscreen.toggle} />
@@ -106,6 +115,15 @@ export function ScreenShareStage({
             <span className="grid size-16 place-items-center rounded-3xl bg-ink-3 text-3xl" aria-hidden>
               🍿
             </span>
+            {pauseAsk && (
+              <p
+                className="flex items-center gap-2 rounded-full bg-sun/15 px-4 py-2 text-sm font-semibold text-sun"
+                role="alert"
+                data-testid="pause-asked"
+              >
+                <Pause className="size-4" aria-hidden /> {pauseAsk.name} asked you to pause
+              </p>
+            )}
             <p className="text-lg font-bold">Your show is live for {partnerName ?? "your person"}</p>
             <ol className="flex flex-col gap-1 text-left text-sm text-muted-foreground">
               {onPopOut && <li>1. Pop out {partnerName ?? "their"}’s face so you can see them over the show.</li>}
@@ -156,11 +174,14 @@ export function ScreenShareStage({
 }
 
 /** Viewer-side volume for the show's sound, separate from your person's voice. */
-function ShowVolume({ participant }: { participant: Participant }) {
+function ShowVolume({ participant, className }: { participant: Participant; className?: string }) {
   const [volume, setVolume] = useState(1);
   const Icon = volume === 0 ? VolumeX : volume < 0.5 ? Volume1 : Volume2;
   return (
-    <span className="ml-auto flex items-center gap-2 rounded-full bg-black/40 px-3 py-1 backdrop-blur" title="Show volume">
+    <span
+      className={cn("flex items-center gap-2 rounded-full bg-black/40 px-3 py-1 backdrop-blur", className)}
+      title="Show volume"
+    >
       <Icon className="size-4 shrink-0" aria-hidden />
       <Slider
         className="w-24"
@@ -176,5 +197,31 @@ function ShowVolume({ participant }: { participant: Participant }) {
         }}
       />
     </span>
+  );
+}
+
+/** "Pause, please": the viewer can't touch the sharer's tab, so they ask. Shows "Asked" for a few seconds. */
+function AskPause({ onAsk, sharer }: { onAsk: () => boolean; sharer: string }) {
+  const [asked, setAsked] = useState(false);
+  useEffect(() => {
+    if (!asked) return;
+    const t = setTimeout(() => setAsked(false), 8000);
+    return () => clearTimeout(t);
+  }, [asked]);
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        if (onAsk()) setAsked(true);
+      }}
+      disabled={asked}
+      aria-live="polite"
+      title={asked ? `${sharer} has been asked` : `Ask ${sharer} to pause the show`}
+      data-testid="ask-pause"
+      className="ml-auto flex shrink-0 items-center gap-1.5 rounded-full bg-black/40 px-3 py-1.5 text-xs font-semibold backdrop-blur transition-colors hover:bg-black/60 disabled:cursor-default disabled:text-mint"
+    >
+      {asked ? <Check className="size-3.5" aria-hidden /> : <Pause className="size-3.5" aria-hidden />}
+      {asked ? "Asked" : "Ask to pause"}
+    </button>
   );
 }

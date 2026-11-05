@@ -51,6 +51,8 @@ import { useWatchTogether } from "../watch/use-watch-together";
 import { WatchDialog } from "../watch/watch-dialog";
 import { WatchStage } from "../watch/watch-stage";
 import { WATCH_SHARE_TRACK } from "@/shared/watch";
+import { useMaybeChat } from "@/features/chat/chat-provider";
+import { setDockOpen, useDock } from "@/features/chat/dock-store";
 import { useAnnounceCall, useWatchSuggestions, WATCH_EVENT, type WatchRequest } from "../watch/watch-events";
 import { ScreenShareStage } from "./screen-share-stage";
 
@@ -127,6 +129,7 @@ export function MeetingRoom({
   // The connected Room. A fresh Room is created per effect run: React StrictMode (dev) mounts
   // twice, and a Room that was disconnected mid-connect must never be reused.
   const [room, setRoom] = useState<Room | null>(null);
+  const dock = useDock();
 
   const handleDisconnect = useEffectEvent((reason?: DisconnectReason) => {
     if (reason === DisconnectReason.CLIENT_INITIATED) return;
@@ -219,7 +222,14 @@ export function MeetingRoom({
   }
 
   return (
-    <div className="fixed inset-0 z-40 flex flex-col bg-background" data-testid="meeting-room">
+    <div
+      className={cn(
+        "fixed inset-0 z-40 flex flex-col bg-background transition-[padding] duration-200",
+        // Make room for the chat docked on the right (DOCKED_WIDTH in dock-store.ts).
+        dock.open && "lg:pr-[380px]",
+      )}
+      data-testid="meeting-room"
+    >
       {room ? (
         <RoomContext.Provider value={room}>
           <ControlProvider roomId={roomId}>
@@ -258,6 +268,8 @@ function CallLayout({ roomName, partnerName, onLeave }: { roomName: string; part
   const watch = useWatchTogether();
   const [watchDialog, setWatchDialog] = useState(false);
   const watchSuggestions = useWatchSuggestions();
+  const chat = useMaybeChat();
+  const dock = useDock();
   useAnnounceCall();
 
   const tracks = useTracks(
@@ -414,6 +426,8 @@ function CallLayout({ roomName, partnerName, onLeave }: { roomName: string; part
             watchMode={share.publication.trackName === WATCH_SHARE_TRACK}
             partnerName={partnerName}
             onPopOut={pipSupported() && !pip.pipWindow ? () => void pip.open() : undefined}
+            onAskPause={fun.askPause}
+            pauseAsk={fun.pauseAsk}
             renderOverlay={(container) =>
               FEATURES.remoteControl && !share.participant.isLocal && share.publication.trackName === CONTROLLABLE_TRACK_NAME ? (
                 <>
@@ -539,6 +553,7 @@ function CallLayout({ roomName, partnerName, onLeave }: { roomName: string; part
           effectsOn={isStudioActive(studio.config)}
           onReact={fun.react}
           onPhotoBooth={fun.canBooth ? fun.startBooth : undefined}
+          chat={chat ? { open: dock.open, unread: chat.unread, onToggle: () => setDockOpen(!dock.open) } : undefined}
           onWatch={() => setWatchDialog(true)}
           watching={!!watch.session}
           watchBlockedBy={share ? "Stop the screen share to watch together" : null}
@@ -553,7 +568,10 @@ function CallLayout({ roomName, partnerName, onLeave }: { roomName: string; part
         onStart={(videoId, start) => watch.open(videoId, start)}
         onShareTab={share || !canShare ? undefined : () => void startWatchShare()}
       />
-      <CallPip pipWindow={pip.pipWindow} />
+      <CallPip
+        pipWindow={pip.pipWindow}
+        notice={fun.pauseAsk ? { text: `${fun.pauseAsk.name} asked you to pause`, onDismiss: fun.dismissPauseAsk } : null}
+      />
       <CallFunOverlay fun={fun} />
       {FEATURES.studio && <StudioPanel open={studioOpen} onOpenChange={setStudioOpen} track={cameraVideo} stats={studio.stats} />}
       <PerfBadge stats={studio.stats} className="fixed top-16 left-4 z-50" />

@@ -4,6 +4,7 @@ import {
   Camera,
   Clapperboard,
   Ellipsis,
+  MessageCircle,
   MonitorUp,
   MonitorX,
   Mic,
@@ -88,6 +89,7 @@ export function CallControls({
   onWatch,
   watching,
   watchBlockedBy,
+  chat,
   onLeave,
 }: {
   micOn: boolean;
@@ -113,6 +115,8 @@ export function CallControls({
   watching?: boolean;
   /** Set while a screen share is on: why Watch Together can't start. */
   watchBlockedBy?: string | null;
+  /** The chat lives beside the call; this opens and closes it, and shows what's unread. */
+  chat?: { open: boolean; unread: number; onToggle: () => void };
   onLeave: () => void;
 }) {
   const watchLabel = watchBlockedBy ?? (watching ? "Change video" : "Watch together");
@@ -287,6 +291,34 @@ export function CallControls({
             </DropdownMenuContent>
           </DropdownMenu>
         </span>
+      )}
+      {chat && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              onClick={chat.onToggle}
+              aria-pressed={chat.open}
+              aria-label={chat.unread && !chat.open ? `Chat, ${chat.unread} unread` : chat.open ? "Close chat" : "Chat"}
+              data-testid="chat-launcher"
+              className={cn(
+                "relative grid size-11 place-items-center rounded-2xl transition-[background-color,transform] active:scale-95 sm:size-12 [&_svg]:size-5",
+                chat.open ? "bg-cream text-ink-0" : "bg-ink-3 text-foreground hover:bg-ink-4",
+              )}
+            >
+              <MessageCircle />
+              {chat.unread > 0 && !chat.open && (
+                <span
+                  className="absolute -top-1 -right-1 grid h-5 min-w-5 place-items-center rounded-full bg-coral px-1 text-[0.7rem] font-bold text-ink-0 ring-2 ring-ink-1"
+                  data-testid="unread-badge"
+                >
+                  {chat.unread > 99 ? "99+" : chat.unread}
+                </span>
+              )}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="top">{chat.open ? "Close chat" : "Chat"}</TooltipContent>
+        </Tooltip>
       )}
       <span className="mx-1 h-8 w-px bg-white/10" aria-hidden />
       <Control label="Leave call" tone="leave" onClick={onLeave}>

@@ -8,6 +8,8 @@ export const funMessageSchema = z.discriminatedUnion("t", [
   // Booth countdown: both people see it; `inMs` is a duration, so clock differences between devices don't matter.
   z.object({ v: z.literal(1), t: z.literal("booth"), id: z.uuid(), inMs: z.number().int().min(1000).max(5000) }),
   z.object({ v: z.literal(1), t: z.literal("booth-cancel"), id: z.uuid() }),
+  // Watch mode: the viewer can't pause the sharer's tab, so they ask.
+  z.object({ v: z.literal(1), t: z.literal("ask-pause") }),
 ]);
 export type FunMessage = z.infer<typeof funMessageSchema>;
 

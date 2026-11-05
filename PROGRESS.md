@@ -271,6 +271,22 @@ Migrations: `20261105000100_note_kinds.sql`, `20261105000200_voice_video_notes.s
 
 Deployed 2026-11-05 to https://duo-virid-eta.vercel.app; the new specs, call and smoke suites pass against production.
 
+## Audit phase 2 (2026-11-05): chat beside the call, ask to pause
+
+- **Chat no longer covers your person.** During a call the chat opens from a Chat button in the control bar (with
+  the unread count) instead of a floating pill over the video. On wide screens (1024 px+) it docks as a full-height
+  panel on the right and the call moves over to make room; on tablets it floats but stops above the controls; on
+  phones it takes the screen and closes back to the call. Outside a call nothing changed. The open state is shared
+  through `src/features/chat/dock-store.ts`.
+- **Ask to pause (Watch mode).** The viewer can't pause the sharer's tab, so the show header has "Ask to pause"
+  (8 s cooldown, shows "Asked"). The sharer is usually on the show's tab, so they get a chime, a system notification
+  when DUO isn't in front, a banner in the pop-out window, and a note on DUO's own tab. Sent as a validated LiveKit
+  data message (`ask-pause` in `src/shared/fun.ts`).
+- Watch-mode shares are labelled as shows for the sharer too ("You're sharing a show").
+- _Verified:_ `call-chat.spec.ts` (unread count in the bar, docked panel never overlaps the video or controls,
+  full-height, phone opens full screen and closes, desktop gets its width back); `pin-watch.spec.ts` (ask to pause
+  reaches the sharer); screenshots at 1440, 1280, 900 and 390 px.
+
 ## Audit phase 1 (2026-11-05)
 
 Found during a full audit (code, live site, screenshots at desktop and phone sizes).

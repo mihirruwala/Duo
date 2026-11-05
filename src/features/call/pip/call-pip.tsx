@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useLocalParticipant, useTracks, VideoTrack, isTrackReference } from "@livekit/components-react";
 import { Track } from "livekit-client";
-import { Mic, MicOff, Video, VideoOff } from "lucide-react";
+import { Mic, MicOff, Pause, Video, VideoOff } from "lucide-react";
 import { DuoAvatar } from "@/components/duo/avatar";
 import { useControl } from "@/features/control/control-provider";
 import { parseParticipantHue } from "@/shared/call";
@@ -54,12 +54,14 @@ export function useCallPip() {
   return { pipWindow, open, close };
 }
 
-export function CallPip({ pipWindow }: { pipWindow: Window | null }) {
+export type PipNotice = { text: string; onDismiss: () => void };
+
+export function CallPip({ pipWindow, notice = null }: { pipWindow: Window | null; notice?: PipNotice | null }) {
   if (!pipWindow) return null;
-  return createPortal(<PipContent />, pipWindow.document.body);
+  return createPortal(<PipContent notice={notice} />, pipWindow.document.body);
 }
 
-function PipContent() {
+function PipContent({ notice }: { notice: PipNotice | null }) {
   const c = useControl();
   const { localParticipant, isMicrophoneEnabled, isCameraEnabled } = useLocalParticipant();
   const cams = useTracks([{ source: Track.Source.Camera, withPlaceholder: true }], { onlySubscribed: false });
@@ -93,6 +95,20 @@ function PipContent() {
           </span>
         )}
       </div>
+
+      {notice && (
+        <div className="flex items-center gap-2 rounded-2xl bg-sun px-3 py-2 text-ink-0" role="alert" data-testid="pip-notice">
+          <Pause className="size-4 shrink-0" aria-hidden />
+          <span className="min-w-0 flex-1 text-xs leading-tight font-bold">{notice.text}</span>
+          <button
+            type="button"
+            onClick={notice.onDismiss}
+            className="rounded-lg px-2 py-1 text-xs font-semibold hover:bg-black/10"
+          >
+            OK
+          </button>
+        </div>
+      )}
 
       {ownerActive ? (
         <div className="flex items-center gap-2 rounded-2xl bg-danger px-3 py-2 text-ink-0" role="alert">

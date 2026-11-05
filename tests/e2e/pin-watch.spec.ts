@@ -202,6 +202,12 @@ test("Watch mode: share a tab with a show, with its sound; the show takes the bi
   const peak = await remoteAudioPeak(hana);
   expect(peak).toBeGreaterThan(0.01);
 
+  // Hana can't pause Gabe's tab, so she asks; Gabe is told (chime/notification aside, on his DUO tab too).
+  await hana.getByTestId("ask-pause").click();
+  await expect(hana.getByTestId("ask-pause")).toHaveText("Asked");
+  await expect(gabe.getByTestId("pause-asked")).toHaveText(/Hana asked you to pause/, { timeout: 10_000 });
+  await expect(gabe.getByText("Hana asked you to pause ⏸")).toBeVisible();
+
   // Fullscreen keeps Gabe's face in the corner, and exits again.
   await hana.getByTestId("stage-fullscreen").click();
   await expect(hana.getByTestId("fullscreen-partner")).toBeVisible();

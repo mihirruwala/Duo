@@ -5,6 +5,7 @@ import { useRoomContext } from "@livekit/components-react";
 import { RoomEvent, type RemoteParticipant } from "livekit-client";
 import { toast } from "sonner";
 import { useMaybeChat } from "@/features/chat/chat-provider";
+import { alertPerson } from "@/features/presence/alerts";
 import { CALL_REACTIONS, encodeFun, FUN_TOPIC, parseFun, type FunMessage } from "@/shared/fun";
 
 type Floating = { id: number; emoji: string; x: number; name: string };
@@ -24,6 +25,9 @@ export function useCallFun() {
   const [booth, setBooth] = useState<{ id: string; endsAt: number; mine: boolean } | null>(null);
   const nextId = useRef(0);
   const lastSent = useRef(0);
+  const lastAsk = useRef(0);
+  /** The other person asked me (the sharer) to pause the show. */
+  const [pauseAsk, setPauseAsk] = useState<{ name: string; at: number } | null>(null);
 
   const show = useCallback((emoji: string, name: string) => {
     const id = nextId.current++;
@@ -48,6 +52,16 @@ export function useCallFun() {
     [publish, show],
   );
 
+  /** Viewer → sharer: "pause, please". Returns false while cooling down (8 s). */
+  const askPause = useCallback(() => {
+    const now = Date.now();
+    if (now - lastAsk.current < 8000) return false;
+    lastAsk.current = now;
+    void publish({ v: 1, t: "ask-pause" });
+    return true;
+  }, [publish]);
+  const dismissPauseAsk = useCallback(() => setPauseAsk(null), []);
+
   const startBooth = useCallback(() => {
     if (booth) return;
     const id = crypto.randomUUID();
@@ -69,6 +83,13 @@ export function useCallFun() {
       setBooth({ id: m.id, endsAt: Date.now() + m.inMs, mine: false });
       toast(`${from.name || "Your person"} started the photo booth 📸`, { description: "Smile!" });
     } else if (m.t === "booth-cancel") setBooth((b) => (b?.id === m.id ? null : b));
+    else if (m.t === "ask-pause") {
+      const name = from.name || "Your person";
+      setPauseAsk({ name, at: Date.now() });
+      // The sharer is usually on the show's tab: chime, plus a system notification when DUO isn't in front.
+      alertPerson("ask-pause", { title: `${name} asked you to pause`, body: "Pause the show in the tab you're sharing." });
+      toast(`${name} asked you to pause ⏸`, { id: "ask-pause" });
+    }
   });
 
   useEffect(() => {
@@ -99,7 +120,14 @@ export function useCallFun() {
     return () => clearTimeout(t);
   }, [booth]);
 
-  return { floating, react, booth, startBooth, cancelBooth, canBooth: !!chat };
+  // A request is only useful for a little while.
+  useEffect(() => {
+    if (!pauseAsk) return;
+    const t = setTimeout(() => setPauseAsk(null), 20_000);
+    return () => clearTimeout(t);
+  }, [pauseAsk]);
+
+  return { floating, react, booth, startBooth, cancelBooth, canBooth: !!chat, askPause, pauseAsk, dismissPauseAsk };
 }
 
 function flash() {

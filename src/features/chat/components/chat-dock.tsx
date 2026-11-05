@@ -1,8 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Bookmark, Images, ListChecks, MessageCircle, Minus, MoveDiagonal2, Upload } from "lucide-react";
+import { Bookmark, Images, ListChecks, MessageCircle, Minus, MoveDiagonal2, Upload, X } from "lucide-react";
 import { ListsPanel } from "@/features/lists/components/lists-panel";
+import { useCallOpen } from "@/features/call/watch/watch-events";
+import { DOCKED_WIDTH, PREF_KEY, restoreDock, setDockOpen, useDock } from "../dock-store";
 import { toast } from "sonner";
 import { DuoAvatar } from "@/components/duo/avatar";
 import { cn } from "@/lib/utils";
@@ -15,7 +17,6 @@ import { MessageList } from "./message-list";
 type Tab = "chat" | "media" | "moments" | "lists";
 type Size = { width: number; height: number };
 
-const PREF_KEY = "duo.chatDock.v1";
 const MIN: Size = { width: 320, height: 380 };
 const DEFAULT: Size = { width: 380, height: 560 };
 
@@ -27,20 +28,25 @@ function loadPrefs(): { open: boolean; size: Size } {
     return { open: false, size: DEFAULT };
   }
 }
-function savePrefs(p: { open: boolean; size: Size }) {
+function saveSize(size: Size) {
   try {
-    localStorage.setItem(PREF_KEY, JSON.stringify(p));
+    const prev = JSON.parse(localStorage.getItem(PREF_KEY) ?? "{}") as Record<string, unknown>;
+    localStorage.setItem(PREF_KEY, JSON.stringify({ ...prev, size }));
   } catch {
     // Storage unavailable; the dock just won't remember its size.
   }
 }
 
-/** Floating, resizable, collapsible chat that sits above the call. */
+/**
+ * The chat. Outside a call it floats (resizable, collapsible) with its own launcher. During a call it
+ * docks beside the video on wide screens (the call makes room for it) and is opened from the call's
+ * control bar, so it never covers your person.
+ */
 export function ChatDock({ roomId, gifsEnabled }: { roomId: string; gifsEnabled: boolean }) {
   const chat = useChat();
-  const [open, setOpen] = useState(false);
   // Until saved prefs are restored we render nothing, so a dock that was open doesn't flash closed.
-  const [restored, setRestored] = useState(false);
+  const { open, restored } = useDock();
+  const inCall = useCallOpen();
   const [size, setSize] = useState<Size>(DEFAULT);
   const [tab, setTab] = useState<Tab>("chat");
   const [replyTo, setReplyTo] = useState<string | null>(null);
@@ -52,17 +58,13 @@ export function ChatDock({ roomId, gifsEnabled }: { roomId: string; gifsEnabled:
   useEffect(() => {
     const p = loadPrefs();
     const t = setTimeout(() => {
-      setOpen(p.open);
       setSize(p.size);
-      setRestored(true);
+      restoreDock();
     }, 0);
     return () => clearTimeout(t);
   }, []);
 
-  const setOpenPersist = (o: boolean) => {
-    setOpen(o);
-    savePrefs({ open: o, size });
-  };
+  const setOpenPersist = setDockOpen;
 
   // Viewer list: all images + GIFs in loaded history, in order.
   const chatMedia = useMemo<ViewerItem[]>(
@@ -88,7 +90,7 @@ export function ChatDock({ roomId, gifsEnabled }: { roomId: string; gifsEnabled:
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
       setSize((s) => {
-        savePrefs({ open: true, size: s });
+        saveSize(s);
         return s;
       });
     };
@@ -106,7 +108,7 @@ export function ChatDock({ roomId, gifsEnabled }: { roomId: string; gifsEnabled:
         width: Math.min(window.innerWidth - 32, Math.max(MIN.width, s.width + delta[0]!)),
         height: Math.min(window.innerHeight - 32, Math.max(MIN.height, s.height + delta[1]!)),
       };
-      savePrefs({ open: true, size: next });
+      saveSize(next);
       return next;
     });
   }
@@ -114,6 +116,8 @@ export function ChatDock({ roomId, gifsEnabled }: { roomId: string; gifsEnabled:
   if (!restored) return null;
 
   if (!open) {
+    // In a call the control bar has the Chat button (with the unread count); no floating pill over the video.
+    if (inCall) return null;
     return (
       <button
         type="button"
@@ -160,20 +164,37 @@ export function ChatDock({ roomId, gifsEnabled }: { roomId: string; gifsEnabled:
             setTab("chat");
           }
         }}
-        className="glass fixed inset-0 z-50 flex flex-col overflow-hidden shadow-2xl sm:inset-auto sm:right-4 sm:bottom-4 sm:max-h-[calc(100dvh-2rem)] sm:max-w-[calc(100vw-2rem)] sm:rounded-[1.75rem] sm:[height:var(--dock-h)] sm:[width:var(--dock-w)]"
-        style={{ "--dock-w": `${size.width}px`, "--dock-h": `${size.height}px` } as React.CSSProperties}
+        data-docked={inCall ? "" : undefined}
+        className={cn(
+          "glass fixed inset-0 z-50 flex flex-col overflow-hidden shadow-2xl sm:inset-auto sm:right-4 sm:bottom-4 sm:max-h-[calc(100dvh-2rem)] sm:max-w-[calc(100vw-2rem)] sm:rounded-[1.75rem] sm:[height:var(--dock-h)] sm:[width:var(--dock-w)]",
+          // Docked beside the call on wide screens: full height, fixed width, flush to the edge.
+          // Mid-size screens: float, but end above the call's control bar.
+          inCall && "sm:bottom-24 sm:max-h-[calc(100dvh-7.5rem)]",
+          inCall &&
+            "lg:top-0 lg:right-0 lg:bottom-0 lg:max-h-none lg:rounded-none lg:border-y-0 lg:border-r-0 lg:bg-ink-1 lg:shadow-none lg:backdrop-blur-none lg:[height:100dvh] lg:[width:var(--dock-docked)]",
+        )}
+        style={
+          {
+            "--dock-w": `${size.width}px`,
+            "--dock-h": `${size.height}px`,
+            "--dock-docked": `${DOCKED_WIDTH}px`,
+          } as React.CSSProperties
+        }
       >
         <button
           type="button"
           onPointerDown={startResize}
           onKeyDown={onResizeKey}
           aria-label="Resize chat (arrow keys)"
-          className="absolute top-1.5 left-1.5 z-10 hidden size-6 cursor-nwse-resize place-items-center rounded-md text-muted-foreground hover:bg-ink-3 sm:grid"
+          className={cn(
+            "absolute top-1.5 left-1.5 z-10 hidden size-6 cursor-nwse-resize place-items-center rounded-md text-muted-foreground hover:bg-ink-3 sm:grid",
+            inCall && "lg:hidden",
+          )}
         >
           <MoveDiagonal2 className="size-3.5" />
         </button>
 
-        <header className="flex items-center gap-2 border-b border-border px-4 pt-3 pb-2 sm:pl-9">
+        <header className={cn("flex items-center gap-2 border-b border-border px-4 pt-3 pb-2 sm:pl-9", inCall && "lg:pl-4")}>
           {chat.partner ? (
             <span className="relative">
               <DuoAvatar name={chat.partner.name} hue={chat.partner.hue} size="sm" />
@@ -198,11 +219,11 @@ export function ChatDock({ roomId, gifsEnabled }: { roomId: string; gifsEnabled:
           <button
             type="button"
             onClick={() => setOpenPersist(false)}
-            aria-label="Minimize chat"
+            aria-label={inCall ? "Close chat" : "Minimize chat"}
             data-testid="chat-minimize"
             className="grid size-8 place-items-center rounded-lg text-muted-foreground hover:bg-ink-3 hover:text-foreground"
           >
-            <Minus className="size-4" />
+            {inCall ? <X className="size-4" /> : <Minus className="size-4" />}
           </button>
         </header>
 
