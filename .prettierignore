@@ -10,3 +10,5 @@ extension/dist-e2e
 public/mediapipe
 public/studio
 public/livekit
+extension/dist-store
+extension/store-assets/out

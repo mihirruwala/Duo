@@ -109,7 +109,10 @@ export default async function LandingPage() {
       </section>
 
       <footer className="mx-auto w-full max-w-6xl px-4 pb-8 text-sm text-muted-foreground sm:px-6">
-        No recording. No public rooms. Calls are end-to-end encrypted by default, and chat is saved privately for the two of you.
+        No recording. No public rooms. Calls are end-to-end encrypted by default, and chat is saved privately for the two of you.{" "}
+        <Link href="/privacy" className="underline underline-offset-4 hover:text-foreground">
+          Privacy
+        </Link>
       </footer>
     </div>
   );

@@ -271,6 +271,18 @@ Migrations: `20261105000100_note_kinds.sql`, `20261105000200_voice_video_notes.s
 
 Deployed 2026-11-05 to https://duo-virid-eta.vercel.app; the new specs, call and smoke suites pass against production.
 
+## Chrome Web Store (2026-11-05)
+
+- `npm run ext:build:store` builds an upload-ready zip: production origin only, no `key` (the store assigns the ID).
+- Public privacy policy at `/privacy`, linked from the landing page, covering both the extension and the app.
+- Listing text, permission justifications, data-use answers, reviewer steps: `docs/CHROME_WEB_STORE.md`. Images
+  (real screenshots from the remote-control E2E, framed at 1280×800, a 440×280 tile, a padded icon) come from
+  `extension/store-assets/render.mjs`.
+- Once `NEXT_PUBLIC_DUO_EXTENSION_ID` is set to the store's ID, the install dialog shows "Add to Chrome" instead of
+  developer-mode steps.
+- Two intermittent E2E failures turned out to be test races, now fixed: the keyboard test pressed ⌘D while the call was
+  still joining, and the XSS test counted links before the last message arrived.
+
 ## Audit phase 2 (2026-11-05): chat beside the call, ask to pause
 
 - **Chat no longer covers your person.** During a call the chat opens from a Chat button in the control bar (with

@@ -59,3 +59,17 @@ test("public sign-up form creates an account (confirmation on → 'check your in
   const u = data.users.find((x) => x.email === email);
   if (u) await admin.auth.admin.deleteUser(u.id);
 });
+
+test("the privacy policy is public (the Chrome Web Store links to it)", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
+  await page.goto("/privacy");
+  await expect(page).toHaveURL(/\/privacy$/);
+  await expect(page.getByRole("heading", { name: "Privacy", level: 1 })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "The DUO Control extension" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "ruwalamihir@gmail.com" })).toHaveAttribute("href", "mailto:ruwalamihir@gmail.com");
+  await page.goto("/");
+  await page.getByRole("link", { name: "Privacy" }).click();
+  await expect(page).toHaveURL(/\/privacy$/);
+  expect(errors).toEqual([]);
+});

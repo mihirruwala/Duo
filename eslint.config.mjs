@@ -18,6 +18,8 @@ const eslintConfig = defineConfig([
     "bin/**",
     "extension/dist/**",
     "extension/dist-e2e/**",
+    "extension/dist-store/**",
+    "extension/store-assets/out/**",
     "public/mediapipe/**",
     "public/studio/**",
     "public/livekit/**",

@@ -61,7 +61,8 @@ URL, API key and secret from Settings → Keys.
 ### 3. Remote control extension (optional, only for the person sharing)
 
 Run `npm run ext:build`, then load `extension/dist` at `chrome://extensions` (Developer mode → Load unpacked). The full
-guide is in [`docs/EXTENSION.md`](docs/EXTENSION.md).
+guide is in [`docs/EXTENSION.md`](docs/EXTENSION.md). Publishing it on the Chrome Web Store is covered in
+[`docs/CHROME_WEB_STORE.md`](docs/CHROME_WEB_STORE.md).
 
 GIFs need a GIPHY API key in `GIPHY_API_KEY`; without it the GIF button is hidden.
 
@@ -104,6 +105,7 @@ On the Supabase dashboard, once:
 | `npm run db:push`             | Apply migrations to the linked Supabase project                                                  |
 | `npm run db:types`            | Regenerate database types from the linked project                                                |
 | `npm run ext:build`           | Build the Chrome extension into `extension/dist` (`DUO_EXTENSION_ORIGINS` for production)        |
+| `npm run ext:build:store`     | Build the Chrome Web Store package (`extension/duo-control-<version>.zip`)                       |
 
 ## Tests
 

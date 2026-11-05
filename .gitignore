@@ -57,6 +57,9 @@ supabase/.branches
 # extension builds
 /extension/dist/
 /extension/dist-e2e/
+/extension/dist-store/
+/extension/duo-control-*.zip
+/extension/store-assets/out/
 
 # DUO Studio generated assets
 /public/mediapipe/

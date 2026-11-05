@@ -21,6 +21,7 @@
     "test:e2e:dev": "E2E_DEV=1 E2E_PORT=3200 playwright test",
     "ext:build": "node scripts/build-extension.mjs",
     "ext:build:e2e": "node scripts/build-extension.mjs --e2e",
+    "ext:build:store": "DUO_EXTENSION_ORIGINS=https://duo-virid-eta.vercel.app node scripts/build-extension.mjs --store",
     "studio:prepare": "node scripts/prepare-studio.mjs",
     "predev": "npm run studio:prepare",
     "prebuild": "node scripts/prepare-studio.mjs --minify"

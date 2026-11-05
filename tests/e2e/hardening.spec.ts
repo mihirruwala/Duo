@@ -40,6 +40,8 @@ test("hostile content renders as text: chat bodies, links and display names can'
   for (const payload of XSS) {
     await expect(hana.getByTestId("chat-message").filter({ hasText: payload }).first()).toBeVisible({ timeout: 15_000 });
   }
+  // The last message (the one with real links) can land a moment after the others.
+  await expect(hana.getByTestId("chat-message").filter({ hasText: "safe link" })).toBeVisible({ timeout: 15_000 });
   await expect(hana.getByTestId("room-members")).toContainText(`<img src=x onerror="window.__pwned=1">`);
 
   expect(await hana.evaluate(() => (window as unknown as { __pwned?: number }).__pwned)).toBeUndefined();
@@ -135,6 +137,8 @@ test("keyboard: the call can be joined and controlled without a mouse", async ({
   await expect(join).toBeFocused();
   await hana.keyboard.press("Enter");
   await expect(hana.getByTestId("meeting-room")).toBeVisible({ timeout: 20_000 });
+  // The call screen shows "Joining…" first; the shortcuts exist once the call is connected.
+  await expect(hana.getByTestId("connection-state")).toHaveAttribute("data-state", "connected", { timeout: 20_000 });
   await hana.keyboard.press("ControlOrMeta+d");
   await expect(hana.getByRole("button", { name: "Unmute" })).toBeVisible();
   // Focus is visible on controls (outline drawn).

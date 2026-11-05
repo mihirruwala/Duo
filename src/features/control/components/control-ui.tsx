@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Hand, Loader2, MousePointer2, Puzzle, ShieldAlert, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { extensionStoreUrl } from "@/shared/extension-id";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { EMERGENCY_SHORTCUT } from "@/shared/control";
 import { emergencyShortcut, retryExtension, useExtensionStatus } from "../extension-bridge";
@@ -130,18 +131,32 @@ export function OwnerControlLayer() {
                   Handing over control needs a small Chrome extension on your computer (the person sharing).
                 </DialogDescription>
               </DialogHeader>
-              <ol className="flex flex-col gap-3 text-sm">
-                <Step n={1}>
-                  Open <code className="rounded bg-ink-3 px-1">chrome://extensions</code> and turn on{" "}
-                  <strong>Developer mode</strong>.
-                </Step>
-                <Step n={2}>
-                  Click <strong>Load unpacked</strong> and choose the{" "}
-                  <code className="rounded bg-ink-3 px-1">extension/dist</code> folder (build it with{" "}
-                  <code className="rounded bg-ink-3 px-1">npm run ext:build</code>).
-                </Step>
-                <Step n={3}>Come back here and press Check again.</Step>
-              </ol>
+              {storeUrl ? (
+                <ol className="flex flex-col gap-3 text-sm">
+                  <Step n={1}>
+                    Add DUO Control from the Chrome Web Store. It opens in a new tab.
+                    <Button asChild className="mt-2 w-fit" variant="brand">
+                      <a href={storeUrl} target="_blank" rel="noopener noreferrer" data-testid="extension-store-link">
+                        <Puzzle /> Add to Chrome
+                      </a>
+                    </Button>
+                  </Step>
+                  <Step n={2}>Come back here and press Check again.</Step>
+                </ol>
+              ) : (
+                <ol className="flex flex-col gap-3 text-sm">
+                  <Step n={1}>
+                    Open <code className="rounded bg-ink-3 px-1">chrome://extensions</code> and turn on{" "}
+                    <strong>Developer mode</strong>.
+                  </Step>
+                  <Step n={2}>
+                    Click <strong>Load unpacked</strong> and choose the{" "}
+                    <code className="rounded bg-ink-3 px-1">extension/dist</code> folder (build it with{" "}
+                    <code className="rounded bg-ink-3 px-1">npm run ext:build</code>).
+                  </Step>
+                  <Step n={3}>Come back here and press Check again.</Step>
+                </ol>
+              )}
               <p className="text-sm text-muted-foreground">
                 Plain screen sharing works without it; it just can&apos;t be controlled.
               </p>
@@ -159,11 +174,13 @@ export function OwnerControlLayer() {
   );
 }
 
+const storeUrl = extensionStoreUrl();
+
 function Step({ n, children }: { n: number; children: React.ReactNode }) {
   return (
     <li className="flex gap-3">
       <span className="grid size-6 shrink-0 place-items-center rounded-full bg-coral text-xs font-bold text-ink-0">{n}</span>
-      <span>{children}</span>
+      <span className="flex flex-col">{children}</span>
     </li>
   );
 }
