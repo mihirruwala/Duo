@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 /**
  * Renders the Chrome Web Store images for DUO Control into extension/store-assets/out/:
- *   screenshot-1..3.png (1280×800), promo-small.png (440×280), icon-128.png (96 px art, 16 px padding).
+ *   screenshot-1..5.png (1280×800), promo-small.png (440×280), icon-128.png (96 px art, 16 px padding).
  *
- * The screenshots are real ones from the remote-control E2E test. Capture them first:
+ * The screenshots are real ones from the app. Capture them first:
  *   DUO_SHOTS=$PWD/extension/store-assets/out/raw npx playwright test tests/e2e/control.spec.ts -g approve
+ *   DUO_STORE_SHOTS=1 npx playwright test tests/e2e/store-shots.spec.ts
  * then: node extension/store-assets/render.mjs
  */
 import { readFileSync } from "node:fs";
@@ -26,9 +27,19 @@ const BASE = `
 
 const SHOTS = [
   {
+    raw: "app-call-chat.png",
+    title: "A private space for two",
+    body: "End-to-end encrypted calls, with chat right beside them: stickers, voice notes and shared lists.",
+  },
+  {
+    raw: "app-watch.png",
+    title: "Watch together, in sync",
+    body: "Press play on a YouTube video for both of you, or share the tab your show is playing in.",
+  },
+  {
     raw: "ctl-approve.png",
-    title: "Nothing happens until you say yes",
-    body: "Your person asks, you approve or deny. Only the one tab you shared, never anything else.",
+    title: "Hand over a tab, only when you say yes",
+    body: "With DUO Control your person can ask to use a tab you share. You approve or deny. Only that one tab.",
   },
   {
     raw: "ctl-owner.png",

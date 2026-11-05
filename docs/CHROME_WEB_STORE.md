@@ -7,6 +7,7 @@ Everything the store asks for, ready to paste. The extension's behaviour is desc
 ```bash
 npm run ext:build:store            # → extension/duo-control-1.0.0.zip (production origin only, no "key")
 DUO_SHOTS=$PWD/extension/store-assets/out/raw npx playwright test tests/e2e/control.spec.ts -g approve
+DUO_STORE_SHOTS=1 npx playwright test tests/e2e/store-shots.spec.ts
 node extension/store-assets/render.mjs   # → extension/store-assets/out/*.png
 ```
 
@@ -15,7 +16,7 @@ Upload `extension/duo-control-1.0.0.zip`. Images are in `extension/store-assets/
 | Field                  | File                                    |
 | ---------------------- | --------------------------------------- |
 | Store icon (128×128)   | `icon-128.png`                          |
-| Screenshots (1280×800) | `screenshot-1.png` … `screenshot-3.png` |
+| Screenshots (1280×800) | `screenshot-1.png` … `screenshot-5.png` |
 | Small promo tile       | `promo-small.png` (440×280)             |
 
 ## 2. Store listing
@@ -30,9 +31,15 @@ Upload `extension/duo-control-1.0.0.zip`. Images are in `extension/store-assets/
 
 **Description:**
 
-> DUO Control is the companion extension for DUO (https://duo-virid-eta.vercel.app), a private video-call space for two
-> people. With it, the person you're on a call with can take over one browser tab you share: click, scroll, type,
-> drag. Handy for helping with a form, a setting or a website while you talk.
+> DUO is a private space for two people: video calls that are end-to-end encrypted, chat that keeps everything you
+> share, and things to do together while you talk. Watch a YouTube video in sync or share the tab your show is playing
+> in, send voice and video notes, keep shared lists of films and places, try live filters and backgrounds with DUO
+> Studio, react with emoji and snap photo-booth pictures. Rooms are invite-only and there's never room for a third
+> person.
+>
+> DUO Control is DUO's companion extension, and it adds one thing: your person can take over a browser tab you share.
+> Click, scroll, type, drag. Handy for helping with a form, a setting or a website while you're on a call. DUO works
+> fully without it; you only need it to hand over control.
 >
 > How it works
 > • In a DUO call, choose "Share a tab they can control", then click DUO Control on the tab you want to share.
@@ -40,15 +47,17 @@ Upload `extension/duo-control-1.0.0.zip`. Images are in `extension/store-assets/
 > • While they're in control you see a red banner with a countdown and a Revoke button. Pressing ⇧⌘9 (Ctrl+Shift+9 on
 > Windows) stops it from anywhere, even outside Chrome.
 >
-> What it can and can't do
+> What the extension can and can't do
 > • Only the one tab you picked. Never other tabs, other apps or browser settings.
 > • Pasting and browser shortcuts are blocked, so your clipboard stays yours.
 > • Chrome shows a "DUO Control started debugging this browser" bar while control is on. That's expected: it's how the
 > input reaches the page.
 > • It stores nothing, makes no network requests of its own, and only talks to DUO's website.
 >
-> You need a DUO account and a room with your person. Plain screen sharing in DUO works without the extension; you only
-> need it to hand over control.
+> Get started at https://duo-virid-eta.vercel.app
+
+The listing leads with DUO, but the single purpose and permission answers below stay about the extension alone: the
+store reviews what the code does, and an extension has to have one narrow purpose.
 
 ## 3. Privacy practices
 

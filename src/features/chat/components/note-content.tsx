@@ -94,12 +94,13 @@ export function VoiceNote({ message, attachment }: { message: ChatMessage; attac
         )}
       </button>
       <div className="min-w-0 flex-1">
-        <div className="flex h-8 items-center gap-[2px]" aria-hidden>
+        <div className="flex h-8 items-center gap-px overflow-hidden" aria-hidden>
           {bars.map((b, i) => (
             <span
               key={i}
               className={cn(
-                "w-[3px] shrink-0 rounded-full transition-colors",
+                // Bars share the width, so the waveform always fits its bubble (docked chat is narrow).
+                "max-w-[3px] min-w-px flex-1 rounded-full transition-colors",
                 i / bars.length < progress ? "bg-cream" : "bg-white/30",
               )}
               style={{ height: `${Math.max(12, b)}%` }}
