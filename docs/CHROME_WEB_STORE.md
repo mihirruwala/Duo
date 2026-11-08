@@ -1,5 +1,13 @@
 # Publishing DUO Control on the Chrome Web Store
 
+**Status:** published (Public) as `dladgepdjenmmkehkknjilppcmofaaei`,
+https://chromewebstore.google.com/detail/dladgepdjenmmkehkknjilppcmofaaei. Production has
+`NEXT_PUBLIC_DUO_EXTENSION_ID` set to it, so the install dialog links to the store. Version 1.0.0 is live; 1.0.1 adds
+https://duoforyou.cv.
+
+Note: with that ID set, the remote-control E2E (which loads the unpacked test build, a different ID) only runs against
+a local build, not against production.
+
 Everything the store asks for, ready to paste. The extension's behaviour is described in [EXTENSION.md](EXTENSION.md).
 
 ## 1. Build the package and images
