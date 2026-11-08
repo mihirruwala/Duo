@@ -54,7 +54,7 @@ Upload `extension/duo-control-1.0.0.zip`. Images are in `extension/store-assets/
 > input reaches the page.
 > • It stores nothing, makes no network requests of its own, and only talks to DUO's website.
 >
-> Get started at https://duo-virid-eta.vercel.app
+> Get started at https://duoforyou.cv
 
 The listing leads with DUO, but the single purpose and permission answers below stay about the extension alone: the
 store reviews what the code does, and an extension has to have one narrow purpose.
@@ -86,7 +86,7 @@ store reviews what the code does, and an extension has to have one narrow purpos
 Certify: not sold to third parties; not used or transferred for purposes unrelated to the single purpose; not used to
 determine creditworthiness or for lending.
 
-**Privacy policy URL:** https://duo-virid-eta.vercel.app/privacy
+**Privacy policy URL:** https://duoforyou.cv/privacy (1.0.0 was submitted with the vercel.app address, which still works)
 
 ## 4. Distribution
 
@@ -100,7 +100,7 @@ gets reviewed. Switch to Public later if you want it searchable.
 The reviewer needs two signed-in DUO users in the same room. Create two test accounts and a room they share, then paste
 into "Test instructions":
 
-> 1. In Chrome, sign in at https://duo-virid-eta.vercel.app/sign-in as user A (email / password below) and open the room
+> 1. In Chrome, sign in at https://duoforyou.cv/sign-in as user A (email / password below) and open the room
 >    "Review". In a second Chrome profile, sign in as user B and open the same room.
 > 2. Both press "Join call" (allow camera and microphone).
 > 3. User A: Share → "Share a tab they can control", switch to any normal website tab, click the DUO Control toolbar icon
@@ -115,5 +115,7 @@ into "Test instructions":
 1. Copy the extension's ID from the store dashboard.
 2. Set `NEXT_PUBLIC_DUO_EXTENSION_ID` to it in Vercel (Production) and redeploy. DUO then connects to the store
    version, and the "Install DUO Control" dialog shows an **Add to Chrome** button instead of developer-mode steps.
-3. To ship an update: raise `VERSION` in `scripts/build-extension.mjs`, run `npm run ext:build:store` and upload the new
+3. Version 1.0.1 (built and ready, `extension/duo-control-1.0.1.zip`) also works on https://duoforyou.cv. Upload it
+   from Package → Upload new package once 1.0.0 is approved, and update the listing's links to the new domain.
+4. To ship an update: raise `VERSION` in `scripts/build-extension.mjs`, run `npm run ext:build:store` and upload the new
    zip.

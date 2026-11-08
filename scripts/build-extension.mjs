@@ -21,7 +21,7 @@ const e2e = process.argv.includes("--e2e");
 const store = process.argv.includes("--store");
 if (e2e && store) throw new Error("--e2e and --store can't be combined");
 const out = join(root, "extension", e2e ? "dist-e2e" : store ? "dist-store" : "dist");
-const VERSION = "1.0.0";
+const VERSION = "1.0.1";
 
 const origins = (process.env.DUO_EXTENSION_ORIGINS || "http://localhost:3000,http://localhost:3001")
   .split(",")

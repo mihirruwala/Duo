@@ -30,6 +30,18 @@ const nextConfig: NextConfig = {
       },
     },
   },
+  // One official address: www.duoforyou.cv → duoforyou.cv (the vercel.app address keeps working,
+  // because the published DUO Control extension and older invite links point there).
+  async redirects() {
+    return [
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "www.duoforyou.cv" }],
+        destination: "https://duoforyou.cv/:path*",
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

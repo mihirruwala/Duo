@@ -70,26 +70,27 @@ Password reset and email confirmation need your own email sender and a domain: s
 
 ## Deploying (Vercel, Supabase, LiveKit Cloud)
 
-It runs at https://duo-virid-eta.vercel.app (Vercel project `mihirruwalas-projects/duo`, functions in `dub1` so they
+It runs at https://duoforyou.cv (also reachable at https://duo-virid-eta.vercel.app; Vercel project
+`mihirruwalas-projects/duo`, functions in `dub1` so they
 sit next to Supabase in `eu-west-1`).
 
 ```bash
 npx vercel@65.9.0 login                       # once
 npx vercel@65.9.0 link --project duo          # once per checkout
 npx vercel@65.9.0 deploy --prod               # deploy
-E2E_BASE_URL=https://duo-virid-eta.vercel.app \
-DUO_EXTENSION_ORIGINS=https://duo-virid-eta.vercel.app npx playwright test   # test the live site
+E2E_BASE_URL=https://duoforyou.cv \
+DUO_EXTENSION_ORIGINS=https://duoforyou.cv npx playwright test   # test the live site
 ```
 
 In Vercel → Settings → Environment Variables, set everything from `.env.example`, with `NEXT_PUBLIC_SITE_URL` set to
 the production URL. `SUPABASE_SECRET_KEY`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` and `GIPHY_API_KEY` are stored as
 secrets. Build the extension for production with
-`DUO_EXTENSION_ORIGINS="https://duo-virid-eta.vercel.app" npm run ext:build`.
+`npm run ext:build:store` (it allows both https://duoforyou.cv and the vercel.app address).
 
 On the Supabase dashboard, once:
 
 - Authentication → URL Configuration: Site URL is the production URL, and the redirect URLs include
-  `https://duo-virid-eta.vercel.app/**` and `http://localhost:3000/**`.
+  `https://duoforyou.cv/**`, `https://duo-virid-eta.vercel.app/**` and `http://localhost:3000/**`.
 - Authentication → Sign In / Providers → Email: turn "Confirm email" on.
 - Authentication → Emails → SMTP Settings: add your own SMTP provider. Without one, confirmation emails only reach
   members of your Supabase team.

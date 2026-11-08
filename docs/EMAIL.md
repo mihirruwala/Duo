@@ -13,9 +13,8 @@ DNS records Vercel shows. Then:
   Search engines, link previews and invite links all use it.
 - Supabase → Authentication → URL Configuration: set Site URL to `https://<your-domain>` and add
   `https://<your-domain>/**` to Redirect URLs (keep the vercel.app and localhost entries).
-- The DUO Control extension only talks to the origins it was built for (`duo-virid-eta.vercel.app` for the store
-  version). The old address keeps working, so nothing breaks; to use the extension on the new domain, ship an update
-  built with `DUO_EXTENSION_ORIGINS=https://<your-domain>,https://duo-virid-eta.vercel.app` (see CHROME_WEB_STORE.md).
+- DUO's domain is https://duoforyou.cv (done 2026-11-08). The DUO Control extension only talks to the origins it was
+  built for: 1.0.0 knows only the vercel.app address, 1.0.1 (`npm run ext:build:store`) knows both.
 
 ## 2. An email provider (Resend)
 
