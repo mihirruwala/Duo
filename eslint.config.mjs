@@ -23,7 +23,10 @@ const eslintConfig = defineConfig([
     "public/mediapipe/**",
     "public/studio/**",
     "public/livekit/**",
+    "android/**",
   ]),
+  // Node scripts written as CommonJS on purpose (Bubblewrap is CommonJS).
+  { files: ["scripts/**/*.cjs"], rules: { "@typescript-eslint/no-require-imports": "off" } },
 ]);
 
 export default eslintConfig;

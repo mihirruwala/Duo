@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "cv.duoforyou.app",
+      "sha256_cert_fingerprints": [
+        "F8:53:88:A0:96:7A:2B:85:D0:6A:B5:4A:07:71:C4:3F:23:C1:4D:B3:A1:CA:0B:12:9D:0B:DE:AA:C3:B6:D1:D5"
+      ]
+    }
+  }
+]

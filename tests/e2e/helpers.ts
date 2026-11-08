@@ -55,10 +55,20 @@ export function emailOf(page: Page): string {
 export async function newUserPage(
   browser: Browser,
   name: string,
-  opts: { fakeDisplay?: boolean; fakeDisplayAudio?: boolean } = {},
+  opts: { fakeDisplay?: boolean; fakeDisplayAudio?: boolean; phone?: boolean } = {},
 ): Promise<Page> {
-  const context = await browser.newContext({ permissions: ["camera", "microphone"] });
+  const context = await browser.newContext({
+    permissions: ["camera", "microphone"],
+    // A phone: 432×768 CSS pixels at 2.5× = 1080×1920 screenshots (Google Play's preferred size).
+    ...(opts.phone ? { viewport: { width: 432, height: 768 }, deviceScaleFactor: 2.5, isMobile: true, hasTouch: true } : {}),
+  });
   openContexts.add(context);
+  // Phone browsers (Android Chrome, iOS Safari) have no screen capture API.
+  if (opts.phone) {
+    await context.addInitScript(() => {
+      delete (MediaDevices.prototype as { getDisplayMedia?: unknown }).getDisplayMedia;
+    });
+  }
   if (opts.fakeDisplay) await context.addInitScript(FAKE_DISPLAY_MEDIA, !!opts.fakeDisplayAudio);
   const page = await context.newPage();
   await signUpOn(page, name);

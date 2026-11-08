@@ -65,3 +65,7 @@ supabase/.branches
 /public/mediapipe/
 /public/studio/
 /public/livekit/
+
+# Android app (scripts/android-app.cjs): only the TWA manifest is kept; the rest is generated
+/android/*
+!/android/twa-manifest.json

@@ -8,7 +8,7 @@
  *   DUO_STORE_SHOTS=1 npx playwright test tests/e2e/store-shots.spec.ts
  * then: node extension/store-assets/render.mjs
  */
-import { readFileSync } from "node:fs";
+import { copyFileSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "@playwright/test";
@@ -82,6 +82,25 @@ await page.setViewportSize({ width: 128, height: 128 });
 await page.setContent(`<!doctype html><style>html,body{margin:0;background:transparent}
   img{position:absolute;left:16px;top:16px;width:96px;height:96px}</style><img src="${icon}">`);
 await page.screenshot({ path: join(out, "icon-128.png"), omitBackground: true });
+
+// Google Play: feature graphic (1024×500). Phone screenshots are used as captured (1080×1920).
+await page.setViewportSize({ width: 1024, height: 500 });
+await page.setContent(`<!doctype html><style>${BASE}
+  .wrap { width: 1024px; height: 500px; display: flex; align-items: center; gap: 48px; padding: 0 72px; }
+  .text { display: flex; flex-direction: column; gap: 14px; }
+  img { width: 168px; height: 168px; }
+  b { font-size: 64px; font-weight: 800; letter-spacing: -0.03em; }
+  p { font-size: 26px; line-height: 1.3; color: #c9bfd2; white-space: nowrap; }
+</style><div class="wrap bg"><img src="${icon}"><div class="text"><b>A private space for two.</b>
+<p>Calls, chat and watching together, just for the two of you.</p></div></div>`);
+await page.screenshot({ path: join(out, "play-feature-graphic.png") });
+for (const f of ["play-1-call.png", "play-2-chat.png", "play-3-lists.png", "play-4-watch.png"]) {
+  try {
+    copyFileSync(join(out, "raw", f), join(out, f));
+  } catch {
+    // Not captured yet: run tests/e2e/store-shots.spec.ts with DUO_STORE_SHOTS=1.
+  }
+}
 
 await browser.close();
 console.log(`Store images → ${out}`);

@@ -1,0 +1,42 @@
+{
+  "packageId": "cv.duoforyou.app",
+  "host": "duoforyou.cv",
+  "name": "DUO",
+  "launcherName": "DUO",
+  "display": "standalone",
+  "themeColor": "#1A1420",
+  "themeColorDark": "#1A1420",
+  "navigationColor": "#1A1420",
+  "navigationColorDark": "#1A1420",
+  "navigationDividerColor": "#1A1420",
+  "navigationDividerColorDark": "#1A1420",
+  "backgroundColor": "#1A1420",
+  "enableNotifications": true,
+  "startUrl": "/home",
+  "iconUrl": "https://duoforyou.cv/icons/icon-512.png",
+  "maskableIconUrl": "https://duoforyou.cv/icons/maskable-512.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "/Users/mihirruwala/.android-keys/duo-upload.jks",
+    "alias": "duo-upload"
+  },
+  "appVersionCode": 1,
+  "shortcuts": [],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://duoforyou.cv/manifest.webmanifest",
+  "fallbackType": "customtabs",
+  "features": {},
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://duoforyou.cv/",
+  "minSdkVersion": 24,
+  "orientation": "default",
+  "fingerprints": [],
+  "additionalTrustedOrigins": [],
+  "retainedBundles": [],
+  "displayOverride": []
+}

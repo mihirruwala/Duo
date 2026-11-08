@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { connection } from "next/server";
 import { Bricolage_Grotesque, Figtree, Geist_Mono } from "next/font/google";
 import { AppToaster } from "@/components/duo/app-toaster";
+import { ServiceWorker } from "@/components/duo/service-worker";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
 
@@ -33,6 +34,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       <body className="flex min-h-full flex-col">
         <TooltipProvider delayDuration={300}>{children}</TooltipProvider>
         <AppToaster />
+        <ServiceWorker />
       </body>
     </html>
   );

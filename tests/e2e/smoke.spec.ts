@@ -69,7 +69,17 @@ test("the privacy policy is public (the Chrome Web Store links to it)", async ({
   await expect(page).toHaveURL(/\/privacy$/);
   await expect(page.getByRole("heading", { name: "Privacy", level: 1 })).toBeVisible();
   await expect(page.getByRole("heading", { name: "The DUO Control extension" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "ruwalamihir@gmail.com" })).toHaveAttribute("href", "mailto:ruwalamihir@gmail.com");
+  await expect(page.getByRole("link", { name: "ruwalamihir@gmail.com" }).last()).toHaveAttribute(
+    "href",
+    "mailto:ruwalamihir@gmail.com",
+  );
+  // Google Play links straight to the account-deletion instructions.
+  await page.goto("/privacy#delete-account");
+  await expect(page.locator("#delete-account").getByRole("heading", { name: "Deleting your account and data" })).toBeVisible();
+  await expect(page.locator("#delete-account").getByRole("link")).toHaveAttribute(
+    "href",
+    /^mailto:ruwalamihir@gmail\.com\?subject=/,
+  );
   await page.goto("/");
   await page.getByRole("link", { name: "Privacy" }).click();
   await expect(page).toHaveURL(/\/privacy$/);

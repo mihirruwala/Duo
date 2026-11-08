@@ -11,9 +11,9 @@ export const metadata: Metadata = {
 const CONTACT = "ruwalamihir@gmail.com";
 const UPDATED = "5 November 2026";
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, id, children }: { title: string; id?: string; children: React.ReactNode }) {
   return (
-    <section className="flex flex-col gap-3">
+    <section id={id} className="flex scroll-mt-6 flex-col gap-3">
       <h2 className="text-xl font-bold">{title}</h2>
       {children}
     </section>
@@ -127,11 +127,22 @@ export default function PrivacyPage() {
         </p>
       </Section>
 
-      <Section title="Deleting your data">
+      <Section title="Deleting your account and data" id="delete-account">
         <p>
-          In Settings you can delete your account. That removes your account, the rooms you host with everything in them, and the
-          files you uploaded elsewhere. Deleting a single room removes its messages and files too. Uninstalling the extension
-          removes it completely; it keeps nothing.
+          In the app or on the website, go to Settings and choose Delete account, then confirm with your password. That removes
+          your account, the rooms you host with everything in them, and the files you uploaded elsewhere, straight away. Deleting
+          a single room removes its messages and files too. Uninstalling the app or the extension doesn&apos;t delete your
+          account; uninstalling the extension removes it completely, since it keeps nothing.
+        </p>
+        <p>
+          Can&apos;t sign in any more? Email{" "}
+          <a
+            href={`mailto:${CONTACT}?subject=Delete%20my%20DUO%20account`}
+            className="font-semibold text-coral underline-offset-4 hover:underline"
+          >
+            {CONTACT}
+          </a>{" "}
+          from the address you signed up with, and the account and everything in it will be deleted within 30 days.
         </p>
       </Section>
 
