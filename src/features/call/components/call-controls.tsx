@@ -13,6 +13,7 @@ import {
   PhoneOff,
   Popcorn,
   SmilePlus,
+  Sofa,
   Sparkles,
   Video,
   VideoOff,
@@ -84,6 +85,9 @@ export function CallControls({
   onShareWatch,
   onOpenStudio,
   effectsOn,
+  effectsPaused,
+  hangout,
+  onToggleHangout,
   onReact,
   onPhotoBooth,
   onWatch,
@@ -108,6 +112,11 @@ export function CallControls({
   /** Present when DUO Studio is available. */
   onOpenStudio?: () => void;
   effectsOn?: boolean;
+  /** Hang-out mode pauses effects; the button explains why it's off. */
+  effectsPaused?: boolean;
+  hangout?: boolean;
+  /** Toggle hang-out mode: a light, open line for hours. */
+  onToggleHangout?: () => void;
   onReact?: (emoji: (typeof CALL_REACTIONS)[number]) => void;
   onPhotoBooth?: () => void;
   /** Start (or, while watching, change) Watch Together. */
@@ -216,8 +225,24 @@ export function CallControls({
           </Control>
         )}
         {onOpenStudio && (
-          <Control label="Effects" tone={effectsOn ? "accent" : "neutral"} pressed={effectsOn} onClick={onOpenStudio}>
+          <Control
+            label={effectsPaused ? "Effects are paused in hang-out mode" : "Effects"}
+            tone={effectsOn ? "accent" : "neutral"}
+            pressed={effectsOn}
+            disabled={effectsPaused}
+            onClick={onOpenStudio}
+          >
             <Sparkles />
+          </Control>
+        )}
+        {onToggleHangout && (
+          <Control
+            label={hangout ? "Turn off hang-out mode" : "Hang-out mode"}
+            tone={hangout ? "accent" : "neutral"}
+            pressed={hangout}
+            onClick={onToggleHangout}
+          >
+            <Sofa />
           </Control>
         )}
         {onReact && (
@@ -249,7 +274,7 @@ export function CallControls({
           </Control>
         )}
       </span>
-      {(onOpenStudio || onReact || onPhotoBooth || onWatch) && (
+      {(onOpenStudio || onReact || onPhotoBooth || onWatch || onToggleHangout) && (
         <span className="sm:hidden">
           <DropdownMenu>
             <DropdownMenuTrigger
@@ -279,8 +304,13 @@ export function CallControls({
                 </DropdownMenuItem>
               )}
               {onOpenStudio && (
-                <DropdownMenuItem onSelect={onOpenStudio}>
-                  <Sparkles /> Effects{effectsOn ? " (on)" : ""}
+                <DropdownMenuItem onSelect={onOpenStudio} disabled={effectsPaused}>
+                  <Sparkles /> Effects{effectsPaused ? " (paused)" : effectsOn ? " (on)" : ""}
+                </DropdownMenuItem>
+              )}
+              {onToggleHangout && (
+                <DropdownMenuItem onSelect={onToggleHangout}>
+                  <Sofa /> {hangout ? "Turn off hang-out mode" : "Hang-out mode"}
                 </DropdownMenuItem>
               )}
               {onPhotoBooth && (

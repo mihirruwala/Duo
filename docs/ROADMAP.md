@@ -36,7 +36,7 @@ _Written 2026-10-31, after M1–M4 shipped to production. Ordered by value ÷ ef
 | 9 ✅  | **Watch Together**: synced YouTube inside the call                                                        | The #1 couples activity; screen-sharing Netflix etc. shows a black screen (DRM) and pipes film audio through the call |
 | 10 ✅ | **Voice and video notes** in chat                                                                         | Time zones: something to wake up to                                                                                   |
 | 11 ✅ | **Shared lists** (films, places, dates…), live for both, with "Watch" on YouTube links during a call      | The shared to-do of a couple; ties into Watch Together                                                                |
-| 12    | **Hang-out mode**: low-bandwidth open line for hours (360p, Studio off, sleep mode)                       | "Parallel presence" is how couples actually use calls                                                                 |
+| 12 ✅ | **Hang-out mode**: low-bandwidth open line for hours (360p, Studio off, sleep mode)                       | "Parallel presence" is how couples actually use calls                                                                 |
 | 13    | Watch Together for any site via the extension (Netflix etc. with each person's own account)               | Needs host permissions, so it's a separate, deliberate decision                                                       |
 
 ## DUO Studio technical plan (item 1)

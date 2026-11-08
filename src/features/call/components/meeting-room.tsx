@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useEffectEvent, useState } from "react";
+import { useCallback, useEffect, useEffectEvent, useState } from "react";
 import {
   isTrackReference,
   RoomAudioRenderer,
@@ -55,6 +55,8 @@ import { useMaybeChat } from "@/features/chat/chat-provider";
 import { setDockOpen, useDock } from "@/features/chat/dock-store";
 import { useAnnounceCall, useWatchSuggestions, WATCH_EVENT, type WatchRequest } from "../watch/watch-events";
 import { ScreenShareStage } from "./screen-share-stage";
+import { cameraOptionsFor, useHangout } from "../hangout/use-hangout";
+import { HangoutBanner, PartnerModeChip, SleepScreen } from "../hangout/hangout-ui";
 
 export type LeaveReason = { kind: "left" } | { kind: "duplicate" } | { kind: "removed" } | { kind: "failed"; message: string };
 
@@ -253,7 +255,9 @@ function CallLayout({ roomName, partnerName, onLeave }: { roomName: string; part
   const state = useConnectionState();
   const { localParticipant, isMicrophoneEnabled, isCameraEnabled, isScreenShareEnabled, cameraTrack } = useLocalParticipant();
   const cameraVideo = cameraTrack?.track as LocalVideoTrack | undefined;
-  const studio = useStudioTrack(FEATURES.studio ? cameraVideo : undefined);
+  const hangout = useHangout();
+  const hangingOut = hangout.mode !== "normal";
+  const studio = useStudioTrack(FEATURES.studio ? cameraVideo : undefined, hangingOut);
   const [studioOpen, setStudioOpen] = useState(false);
   const remotes = useRemoteParticipants();
   const { canPlayAudio, startAudio } = useAudioPlayback();
@@ -294,7 +298,8 @@ function CallLayout({ roomName, partnerName, onLeave }: { roomName: string; part
   }
   async function toggleCam() {
     try {
-      await localParticipant.setCameraEnabled(!isCameraEnabled);
+      // Options only apply when the camera is first published (e.g. turned on during hang-out mode).
+      await localParticipant.setCameraEnabled(!isCameraEnabled, ...cameraOptionsFor(hangout.mode));
     } catch (err) {
       toast.error(describeMediaError(err, "camera"));
     }
@@ -460,6 +465,9 @@ function CallLayout({ roomName, partnerName, onLeave }: { roomName: string; part
         }
       : null;
 
+  const setHangoutMode = hangout.setMode;
+  const wake = useCallback(() => setHangoutMode("hangout"), [setHangoutMode]);
+
   const reconnecting = state === ConnectionState.Reconnecting || state === ConnectionState.SignalReconnecting;
   const shareBlockedBy = share && !share.participant.isLocal ? share.participant.name || "Your person" : null;
 
@@ -471,6 +479,7 @@ function CallLayout({ roomName, partnerName, onLeave }: { roomName: string; part
           <h1 className="truncate text-lg font-bold">{roomName}</h1>
         </span>
         <EncryptionBadge />
+        {remote && <PartnerModeChip mode={hangout.partnerMode} name={remote.name || partnerName || "Your person"} />}
         {pipSupported() && (
           <Button
             size="sm"
@@ -505,6 +514,10 @@ function CallLayout({ roomName, partnerName, onLeave }: { roomName: string; part
         >
           <WifiOff className="size-4" /> Your connection dropped. Reconnecting automatically, hang tight.
         </div>
+      )}
+
+      {hangout.mode === "hangout" && (
+        <HangoutBanner onSleep={() => hangout.setMode("sleep")} onOff={() => hangout.setMode("normal")} />
       )}
 
       {!canPlayAudio && (
@@ -550,7 +563,10 @@ function CallLayout({ roomName, partnerName, onLeave }: { roomName: string; part
               : undefined
           }
           onOpenStudio={FEATURES.studio ? () => setStudioOpen(true) : undefined}
-          effectsOn={isStudioActive(studio.config)}
+          effectsOn={isStudioActive(studio.config) && !hangingOut}
+          effectsPaused={hangingOut}
+          hangout={hangingOut}
+          onToggleHangout={() => hangout.setMode(hangingOut ? "normal" : "hangout")}
           onReact={fun.react}
           onPhotoBooth={fun.canBooth ? fun.startBooth : undefined}
           chat={chat ? { open: dock.open, unread: chat.unread, onToggle: () => setDockOpen(!dock.open) } : undefined}
@@ -573,6 +589,14 @@ function CallLayout({ roomName, partnerName, onLeave }: { roomName: string; part
         notice={fun.pauseAsk ? { text: `${fun.pauseAsk.name} asked you to pause`, onDismiss: fun.dismissPauseAsk } : null}
       />
       <CallFunOverlay fun={fun} />
+      {hangout.mode === "sleep" && (
+        <SleepScreen
+          micOn={isMicrophoneEnabled}
+          partnerName={remote?.name || partnerName || "Your person"}
+          partnerHere={!!remote}
+          onWake={wake}
+        />
+      )}
       {FEATURES.studio && <StudioPanel open={studioOpen} onOpenChange={setStudioOpen} track={cameraVideo} stats={studio.stats} />}
       <PerfBadge stats={studio.stats} className="fixed top-16 left-4 z-50" />
     </>

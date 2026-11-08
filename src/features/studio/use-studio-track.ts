@@ -18,14 +18,15 @@ import { StudioProcessor, type StudioStats } from "./studio-processor";
  * Keeps a LocalVideoTrack in sync with the current Studio look: attaches the processor when
  * something is on, sends config updates while running, and removes it entirely when everything
  * is off (zero cost when idle). Works for the pre-call preview and the published camera alike.
+ * `paused` (hang-out mode) takes the processor off without forgetting the look.
  */
-export function useStudioTrack(track: LocalVideoTrack | null | undefined) {
+export function useStudioTrack(track: LocalVideoTrack | null | undefined, paused = false) {
   const config = useStudioConfig();
   const bgRevision = useCustomBackgroundRevision();
   const [stats, setStats] = useState<StudioStats | null>(null);
   const processorRef = useRef<StudioProcessor | null>(null);
   const busy = useRef<Promise<void>>(Promise.resolve());
-  const active = isStudioActive(config);
+  const active = isStudioActive(config) && !paused;
 
   // Attach / detach.
   useEffect(() => {

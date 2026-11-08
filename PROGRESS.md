@@ -283,6 +283,23 @@ Deployed 2026-11-05 to https://duo-virid-eta.vercel.app; the new specs, call and
 - _Verified:_ `account.spec.ts` (reset link opened in a different browser context, single use, old password refused,
   change password, robots/sitemap/preview card, private pages noindex).
 
+## Hang-out mode (2026-11-08)
+
+For leaving the call on for hours. The sofa button in the call bar (or More on phones) turns it on, per person:
+
+- Your camera is captured and sent at 360p / 20 fps (one 180p layer under it), and their camera is received at no more
+  than the medium layer. Watch Together and shared tabs keep full quality.
+- Effects are paused, not forgotten: they come back when you turn it off.
+- The screen is kept awake (Screen Wake Lock), so a phone doesn't lock and drop the call.
+- **Sleep:** black screen with a dim clock. Your camera goes off and their video stops downloading; sound keeps going both
+  ways. Any tap or key wakes it, and the camera comes back if it was on.
+- The other person sees "Hana is hanging out" / "Hana is asleep" in the header (data message, re-sent when they rejoin).
+- The mode survives a reconnect or reload of the same tab (sessionStorage per room).
+
+Verified by `hangout.spec.ts`: capture drops from 720p to 360p and back, the chip on the other side, effects disabled,
+sleep turns the camera off and stops their video while audio flows both ways, wake, and a reload keeps the mode.
+Received resolution can't be asserted in E2E (adaptive stream already sizes it to the tile), so that cap is untested.
+
 ## Chrome Web Store (2026-11-05)
 
 - `npm run ext:build:store` builds an upload-ready zip: production origin only, no `key` (the store assigns the ID).

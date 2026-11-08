@@ -10,7 +10,10 @@ export const funMessageSchema = z.discriminatedUnion("t", [
   z.object({ v: z.literal(1), t: z.literal("booth-cancel"), id: z.uuid() }),
   // Watch mode: the viewer can't pause the sharer's tab, so they ask.
   z.object({ v: z.literal(1), t: z.literal("ask-pause") }),
+  // Hang-out mode: tells the other person you're on a light open line, or asleep.
+  z.object({ v: z.literal(1), t: z.literal("mode"), mode: z.enum(["normal", "hangout", "sleep"]) }),
 ]);
+export type CallMode = "normal" | "hangout" | "sleep";
 export type FunMessage = z.infer<typeof funMessageSchema>;
 
 export function parseFun(bytes: Uint8Array): FunMessage | null {
