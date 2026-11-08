@@ -55,4 +55,8 @@ Once mail is flowing, Supabase → Authentication → Sign In / Providers → Em
 then have to prove they own their address. The sign-up page already handles this ("Check your inbox").
 
 Note for the E2E suite: it creates users through the admin API with `email_confirm: true`, so it doesn't depend on this
-setting.
+setting. The one test that signs up through the real form uses Resend's test inbox (`delivered+…@resend.dev`), so the
+confirmation it triggers never bounces.
+
+Status (2026-11-08): Resend verified for duoforyou.cv (region Tokyo), Supabase SMTP and both templates set, password
+reset tested end to end on another device.

@@ -37,7 +37,9 @@ test("join form routes a pasted invite link to /join with the code in the fragme
 
 test("public sign-up form creates an account (confirmation on → 'check your inbox'; off → signed in)", async ({ page }) => {
   test.skip(!process.env.SUPABASE_SECRET_KEY, "needs Supabase");
-  const email = `duo-e2e-signup-${Date.now()}@example.com`;
+  // With "Confirm email" on, Supabase really sends a confirmation through DUO's mail provider. Resend's
+  // test inbox accepts it without a bounce, so test runs don't hurt duoforyou.cv's sending reputation.
+  const email = `delivered+duo-e2e-signup-${Date.now()}@resend.dev`;
   await page.goto("/sign-up");
   await page.getByLabel("Your name").fill("Sam");
   await page.getByLabel("Email").fill(email);
@@ -55,7 +57,7 @@ test("public sign-up form creates an account (confirmation on → 'check your in
   // Clean up the account it created.
   const { adminClient } = await import("./fixtures");
   const admin = adminClient();
-  const { data } = await admin.auth.admin.listUsers({ perPage: 200 });
+  const { data } = await admin.auth.admin.listUsers({ perPage: 1000 });
   const u = data.users.find((x) => x.email === email);
   if (u) await admin.auth.admin.deleteUser(u.id);
 });
