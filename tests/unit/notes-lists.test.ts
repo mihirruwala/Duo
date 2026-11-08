@@ -23,9 +23,10 @@ describe("voice notes", () => {
     expect(toWaveform([0.2, 0.4], 48)).toHaveLength(48);
   });
 
-  it("picks a recording format DUO accepts", () => {
-    expect(pickMimeType("voice", (t) => t === "audio/webm;codecs=opus")).toBe("audio/webm;codecs=opus");
-    expect(pickMimeType("voice", (t) => t === "audio/mp4")).toBe("audio/mp4"); // Safari
+  it("picks a recording format DUO accepts, preferring MP4 (plays on iPhone)", () => {
+    expect(pickMimeType("voice", () => true)).toBe("audio/mp4;codecs=mp4a.40.2"); // Chrome, Safari
+    expect(pickMimeType("video", () => true)).toBe("video/mp4;codecs=avc1.42E01E,mp4a.40.2");
+    expect(pickMimeType("voice", (t) => t.startsWith("audio/webm"))).toBe("audio/webm;codecs=opus"); // Firefox
     expect(pickMimeType("video", (t) => t.startsWith("video/webm"))).toBe("video/webm;codecs=vp9,opus");
     expect(pickMimeType("voice", () => false)).toBeNull();
   });

@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { connection } from "next/server";
 import { Bricolage_Grotesque, Figtree, Geist_Mono } from "next/font/google";
-import { Toaster } from "@/components/ui/sonner";
+import { AppToaster } from "@/components/duo/app-toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
 
@@ -32,8 +32,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="en" className={`dark ${bricolage.variable} ${figtree.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col">
         <TooltipProvider delayDuration={300}>{children}</TooltipProvider>
-        {/* Offset keeps toasts clear of the "Remote control active" banner. */}
-        <Toaster position="top-center" offset={{ top: 64 }} />
+        <AppToaster />
       </body>
     </html>
   );

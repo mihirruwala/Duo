@@ -77,6 +77,8 @@ test("voice and video notes: record, send, and the other person plays them", asy
   const voice = gabe.getByTestId("voice-note");
   await expect(voice).toBeVisible({ timeout: 20_000 });
   await expect(voice.getByTestId("voice-duration")).toHaveText(/0:0[2-3]/);
+  // Recorded as MP4 (AAC), which also plays on iPhones.
+  await expect(voice.locator("audio")).toHaveAttribute("src", /voice-note-\d+\.m4a/);
   await voice.getByRole("button", { name: "Play voice message" }).click();
   await expect(voice).toHaveAttribute("data-playing", "", { timeout: 10_000 });
   await expect

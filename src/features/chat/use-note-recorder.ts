@@ -6,9 +6,17 @@ import type { RecordedNote } from "./chat-provider";
 
 type Kind = "voice" | "video";
 
+// MP4 (AAC audio, H.264 video) first: it plays everywhere, including Safari on iPhone, which has patchy
+// WebM support. Chrome and Safari record it; WebM is the fallback for browsers that can't (Firefox).
 const CANDIDATES: Record<Kind, string[]> = {
-  voice: ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg;codecs=opus"],
-  video: ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm", "video/mp4"],
+  voice: ["audio/mp4;codecs=mp4a.40.2", "audio/mp4", "audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus"],
+  video: [
+    "video/mp4;codecs=avc1.42E01E,mp4a.40.2",
+    "video/mp4",
+    "video/webm;codecs=vp9,opus",
+    "video/webm;codecs=vp8,opus",
+    "video/webm",
+  ],
 };
 
 /** The first container this browser can record that DUO also accepts. */
