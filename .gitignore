@@ -73,3 +73,6 @@ supabase/.branches
 # iOS build output
 ios/build/
 ios/**/xcuserdata/
+
+# Personal Claude Code settings
+.claude/settings.local.json
