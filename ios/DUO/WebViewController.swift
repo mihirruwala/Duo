@@ -69,6 +69,8 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDeleg
         config.userContentController.addUserScript(
             WKUserScript(source: noZoom, injectionTime: .atDocumentEnd, forMainFrameOnly: true)
         )
+        // Haptics: the page calls window.webkit.messageHandlers.duoHaptic.postMessage("light").
+        config.userContentController.add(HapticBridge(), name: "duoHaptic")
 
         let background = UIColor(named: "LaunchBackground") ?? .black
         webView = WKWebView(frame: .zero, configuration: config)
@@ -276,4 +278,26 @@ private final class OfflineView: UIView {
 
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError("not used") }
+}
+
+/// Turns the page's haptic requests into Taptic Engine feedback. Only DUO's own pages are listened to.
+private final class HapticBridge: NSObject, WKScriptMessageHandler {
+    private let light = UIImpactFeedbackGenerator(style: .light)
+    private let medium = UIImpactFeedbackGenerator(style: .medium)
+    private let selection = UISelectionFeedbackGenerator()
+    private let notify = UINotificationFeedbackGenerator()
+
+    func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
+        let origin = message.frameInfo.securityOrigin
+        guard message.frameInfo.isMainFrame, origin.protocol == "https",
+              DUOLinks.hosts.contains(origin.host.lowercased()),
+              let kind = message.body as? String else { return }
+        switch kind {
+        case "medium": medium.impactOccurred()
+        case "selection": selection.selectionChanged()
+        case "success": notify.notificationOccurred(.success)
+        case "warning": notify.notificationOccurred(.warning)
+        default: light.impactOccurred()
+        }
+    }
 }

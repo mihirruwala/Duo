@@ -130,8 +130,10 @@ export function ChatDock({ roomId, roomName, gifsEnabled }: { roomId: string; ro
     });
   }
 
-  if (!restored || phone === null) return null;
-  const roomScreen = phone && !inCall;
+  const roomScreen = phone === true && !inCall;
+  // The phone room screen doesn't depend on saved prefs, so it renders in the same commit as the
+  // navigation and slides in with the page.
+  if (!roomScreen && (!restored || phone === null)) return null;
 
   if (!open && !roomScreen) {
     // In a call the control bar has the Chat button (with the unread count); no floating pill over the video.
@@ -332,7 +334,12 @@ function PhoneRoomBar({ roomName }: { roomName: string }) {
               : "Waiting for your person to join";
   return (
     <header className="flex items-center gap-1 border-b border-border/60 bg-ink-1/80 px-1.5 pt-[calc(env(safe-area-inset-top)+0.375rem)] pb-1.5 backdrop-blur-xl">
-      <Link href="/home" aria-label="All rooms" className="grid size-11 shrink-0 place-items-center text-coral">
+      <Link
+        href="/home"
+        transitionTypes={["nav-back"]}
+        aria-label="All rooms"
+        className="grid size-11 shrink-0 place-items-center text-coral"
+      >
         <ChevronLeft className="size-7" strokeWidth={2.4} />
       </Link>
       <button

@@ -1,7 +1,8 @@
 "use client";
 
 import { memo, useEffect, useRef, useState } from "react";
-import { AlertCircle, Bookmark, BookmarkCheck, Copy, CornerUpLeft, Pencil, SmilePlus, Trash2 } from "lucide-react";
+import { AlertCircle, Bookmark, BookmarkCheck, Copy, CornerUpLeft, Pencil, Reply, SmilePlus, Trash2 } from "lucide-react";
+import { haptic } from "@/lib/haptics";
 import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -83,13 +84,43 @@ export const MessageItem = memo(function MessageItem(props: MessageItemProps) {
     if (pressTimer.current) clearTimeout(pressTimer.current);
     pressTimer.current = null;
   };
+  // Touch gestures on the bubble: hold for actions, or swipe right to reply (like Messages).
+  const SWIPE_REPLY = 56;
+  const gesture = useRef<{ x: number; y: number; mode: "none" | "swipe" | "scroll"; armed: boolean } | null>(null);
+  const [swipeX, setSwipeX] = useState(0);
   const onPressStart = (e: React.PointerEvent) => {
     if (e.pointerType !== "touch" || deleted || editing || !confirmed) return;
     cancelPress();
+    gesture.current = { x: e.clientX, y: e.clientY, mode: "none", armed: false };
     pressTimer.current = setTimeout(() => {
       setHeld(true);
-      navigator.vibrate?.(10);
+      haptic("medium");
     }, 450);
+  };
+  const onPressMove = (e: React.PointerEvent) => {
+    const g = gesture.current;
+    if (e.pointerType !== "touch" || !g) return;
+    const dx = e.clientX - g.x;
+    const dy = e.clientY - g.y;
+    if (g.mode === "none") {
+      if (Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy) * 1.5 && dx > 0) g.mode = "swipe";
+      else if (Math.abs(dy) > 8 || Math.abs(dx) > 8) g.mode = "scroll";
+      if (g.mode !== "none") cancelPress();
+    }
+    if (g.mode !== "swipe") return;
+    const x = Math.min(80, Math.max(0, dx * 0.7));
+    setSwipeX(x);
+    if (x >= SWIPE_REPLY && !g.armed) {
+      g.armed = true;
+      haptic("light");
+    } else if (x < SWIPE_REPLY) g.armed = false;
+  };
+  const onPressEnd = () => {
+    cancelPress();
+    const g = gesture.current;
+    gesture.current = null;
+    if (g?.mode === "swipe" && g.armed) props.onReply(m.id);
+    setSwipeX(0);
   };
   useEffect(() => {
     if (!held) return;
@@ -115,6 +146,7 @@ export const MessageItem = memo(function MessageItem(props: MessageItemProps) {
       data-testid="chat-message"
       data-mine={mine ? "" : undefined}
       data-status={m.status}
+      data-held={held ? "" : undefined}
       className={cn(
         "group/msg relative flex flex-col px-3 transition-colors duration-700",
         mine ? "items-end" : "items-start",
@@ -126,21 +158,41 @@ export const MessageItem = memo(function MessageItem(props: MessageItemProps) {
         <span className="mb-1 ml-1 text-xs font-semibold text-muted-foreground">{sender?.name ?? "Someone"}</span>
       )}
 
-      <div className={cn("relative flex max-w-[85%] items-end gap-1", mine && "flex-row-reverse")}>
+      {swipeX > 0 && (
+        <span
+          aria-hidden
+          className="absolute top-1/2 left-2 grid size-8 -translate-y-1/2 place-items-center rounded-full bg-ink-3 text-coral"
+          style={{
+            opacity: Math.min(1, swipeX / SWIPE_REPLY),
+            transform: `translateY(-50%) scale(${0.6 + 0.4 * Math.min(1, swipeX / SWIPE_REPLY)})`,
+          }}
+        >
+          <Reply className="size-4" />
+        </span>
+      )}
+      <div
+        className={cn(
+          "relative flex max-w-[85%] items-end gap-1",
+          mine && "flex-row-reverse",
+          swipeX === 0 && "transition-transform duration-200",
+        )}
+        style={swipeX ? { transform: `translateX(${swipeX}px)` } : undefined}
+      >
         <div
           tabIndex={0}
           aria-label={`${mine ? "You" : (sender?.name ?? "Someone")}: ${replySnippet(m)}`}
           onPointerDown={onPressStart}
-          onPointerUp={cancelPress}
-          onPointerCancel={cancelPress}
-          onPointerMove={(e) => e.pointerType === "touch" && Math.abs(e.movementY) > 2 && cancelPress()}
+          onPointerUp={onPressEnd}
+          onPointerCancel={onPressEnd}
+          onPointerMove={onPressMove}
           onContextMenu={(e) => {
             // The long-press is ours on touch screens; no system menu on top of it.
             if (window.matchMedia("(hover: none)").matches) e.preventDefault();
           }}
           className={cn(
             "relative min-w-0 rounded-3xl outline-none transition-transform focus-visible:ring-2 focus-visible:ring-ring",
-            "[@media(hover:none)]:[-webkit-touch-callout:none] [@media(hover:none)]:select-none",
+            // pan-y: vertical scrolling stays the browser's, a sideways drag is ours (swipe to reply).
+            "[@media(hover:none)]:touch-pan-y [@media(hover:none)]:[-webkit-touch-callout:none] [@media(hover:none)]:select-none",
             held && "scale-[1.03]",
             !bare && "px-3.5 py-2",
             !bare && (mine ? "rounded-br-lg bg-coral/18 text-cream" : "rounded-bl-lg bg-ink-3"),
@@ -215,11 +267,12 @@ export const MessageItem = memo(function MessageItem(props: MessageItemProps) {
             className={cn(
               "absolute -top-4 z-10 flex items-center gap-0.5 rounded-xl border border-border bg-popover p-0.5 opacity-0 shadow-lg transition-opacity group-focus-within/msg:opacity-100 group-hover/msg:opacity-100",
               // Touch: only after a long-press, a little higher so the finger doesn't cover it.
-              "[@media(hover:none)]:pointer-events-none [@media(hover:none)]:-top-12 [@media(hover:none)]:!opacity-0 [@media(hover:none)]:rounded-2xl",
+              "[@media(hover:none)]:-top-12 [@media(hover:none)]:rounded-2xl",
               mine ? "right-2" : "left-2",
               (pickerOpen || confirmDelete) && "opacity-100",
-              (held || pickerOpen || confirmDelete) &&
-                "[@media(hover:none)]:pointer-events-auto [@media(hover:none)]:!opacity-100",
+              held || pickerOpen || confirmDelete
+                ? "[@media(hover:none)]:!opacity-100"
+                : "[@media(hover:none)]:pointer-events-none [@media(hover:none)]:!opacity-0",
             )}
             role="toolbar"
             aria-label="Message actions"

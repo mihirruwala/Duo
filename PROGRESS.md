@@ -304,8 +304,15 @@ squeezed website. Desktop is unchanged.
   selection or callouts on controls, safe-area padding (viewport-fit=cover). The iOS app also turns off pinch-zoom and
   link previews. Browser wording ("address bar", "this browser", "Hover…") replaced where phones see it.
 
+Native touches (same day): swipe a message right to reply; haptics on long-press, the swipe, sending, reactions,
+mic/camera toggles, joining and leaving a call and the tab bar (the iPhone app forwards them to the Taptic Engine through
+a `duoHaptic` message handler, since WKWebView has no Vibration API; Android uses `navigator.vibrate`); pull down to
+refresh Rooms; and iOS-style push / pop slides between Rooms and a room (React `<ViewTransition>` with `nav-forward` /
+`nav-back` link types, phones only, off with reduced motion).
+
 Verified by `phone.spec.ts` (390×844 touch): home rows and tab bar, the room as chat with no camera running, info sheet,
-call sheet starting the camera, joining, full-width remote video, and Leave returning to the chat. Screens reviewed from
+call sheet starting the camera, joining, full-width remote video, Leave returning to the chat, and real touch input
+(Chrome DevTools protocol) for swipe-to-reply and long-press. Screens reviewed from
 `phone-audit.spec.ts` (`DUO_PHONE_AUDIT=<dir>`).
 
 ## Separate dev database (2026-11-09)

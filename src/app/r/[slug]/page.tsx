@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowLeft, Lock } from "lucide-react";
 import { AppHeader } from "@/components/duo/app-header";
+import { PageSlide } from "@/components/duo/page-slide";
 import { DuoAvatar } from "@/components/duo/avatar";
 import { SetupRequired } from "@/components/duo/setup-required";
 import { Button } from "@/components/ui/button";
@@ -29,26 +30,32 @@ export default async function RoomPage({ params }: PageProps<"/r/[slug]">) {
   const partner = room.members.find((m) => m.userId !== user.id) ?? null;
 
   return (
-    <div className="flex min-h-dvh flex-col">
-      {/* Phones get the room's own top bar instead (in the chat screen). */}
-      <div className="max-sm:hidden">
-        <AppHeader name={profile?.display_name ?? "You"} hue={profile?.avatar_hue ?? 20} />
+    <PageSlide>
+      <div className="flex min-h-dvh flex-col">
+        {/* Phones get the room's own top bar instead (in the chat screen). */}
+        <div className="max-sm:hidden">
+          <AppHeader name={profile?.display_name ?? "You"} hue={profile?.avatar_hue ?? 20} />
+        </div>
+        <div className="mx-auto w-full max-w-6xl px-4 pb-2 max-sm:hidden sm:px-6">
+          <Link
+            href="/home"
+            transitionTypes={["nav-back"]}
+            className="inline-flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="size-4" /> All rooms
+          </Link>
+        </div>
+        <RoomExperience
+          slug={room.slug}
+          roomId={room.id}
+          roomName={room.name}
+          me={{ id: me.userId, name: me.displayName, hue: me.avatarHue }}
+          partner={partner ? { id: partner.userId, name: partner.displayName, hue: partner.avatarHue } : null}
+          gifsEnabled={Boolean(process.env.GIPHY_API_KEY)}
+          aside={<RoomDetails room={room} me={me} partner={partner} />}
+        />
       </div>
-      <div className="mx-auto w-full max-w-6xl px-4 pb-2 max-sm:hidden sm:px-6">
-        <Link href="/home" className="inline-flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="size-4" /> All rooms
-        </Link>
-      </div>
-      <RoomExperience
-        slug={room.slug}
-        roomId={room.id}
-        roomName={room.name}
-        me={{ id: me.userId, name: me.displayName, hue: me.avatarHue }}
-        partner={partner ? { id: partner.userId, name: partner.displayName, hue: partner.avatarHue } : null}
-        gifsEnabled={Boolean(process.env.GIPHY_API_KEY)}
-        aside={<RoomDetails room={room} me={me} partner={partner} />}
-      />
-    </div>
+    </PageSlide>
   );
 }
 

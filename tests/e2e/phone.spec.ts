@@ -46,6 +46,30 @@ test("phone layout: rooms list and tab bar, the room is the chat, calls start fr
   await expect(hana.getByText("hi from the laptop")).toBeVisible({ timeout: 10_000 });
   expect(await hana.evaluate(() => (window as unknown as { __cams: number }).__cams)).toBe(0);
 
+  // Touch gestures on a message, with real touch input: swipe right to reply, press and hold for actions.
+  const cdp = await hana.context().newCDPSession(hana);
+  let b = (await hana.getByText("hi from the laptop").boundingBox())!;
+  const at = (x: number) => [{ x, y: b.y + b.height / 2 }];
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: at(b.x + 10) });
+  for (let dx = 10; dx <= 130; dx += 15) {
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: at(b.x + 10 + dx) });
+  }
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  await expect(hana.getByTestId("reply-bar")).toContainText("Replying to Gabe");
+  await hana.getByRole("button", { name: "Cancel reply" }).click();
+  await expect(hana.getByTestId("reply-bar")).toHaveCount(0);
+
+  const toolbar = hana.getByTestId("chat-message").filter({ hasText: "hi from the laptop" }).getByRole("toolbar");
+  await expect(toolbar).toHaveCSS("opacity", "0");
+  // Closing the reply bar moved the (bottom-anchored) messages: measure again.
+  b = (await hana.getByText("hi from the laptop").boundingBox())!;
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: at(b.x + 10) });
+  const msg = hana.getByTestId("chat-message").filter({ hasText: "hi from the laptop" });
+  await expect(msg).toHaveAttribute("data-held", "", { timeout: 2000 });
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  await expect(toolbar).toHaveCSS("opacity", "1");
+  await expect(toolbar.getByRole("button", { name: "Reply" })).toBeVisible();
+
   // Room info sheet.
   await hana.getByTestId("room-info-button").click();
   await expect(hana.getByTestId("room-info-sheet")).toContainText("locked to you two");

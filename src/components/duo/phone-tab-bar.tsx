@@ -1,5 +1,6 @@
 "use client";
 
+import { haptic } from "@/lib/haptics";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { MessagesSquare, Settings } from "lucide-react";
@@ -25,6 +26,7 @@ export function PhoneTabBar() {
             key={href}
             href={href}
             aria-current={active ? "page" : undefined}
+            onClick={() => !active && haptic("selection")}
             className={cn(
               "flex flex-col items-center gap-0.5 pt-2 pb-1.5 text-[11px] font-semibold",
               active ? "text-coral" : "text-muted-foreground",

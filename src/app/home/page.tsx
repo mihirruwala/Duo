@@ -3,6 +3,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowRight, ChevronRight, Hourglass, Plus } from "lucide-react";
 import { PhoneLargeTitle, PhoneTabBar } from "@/components/duo/phone-tab-bar";
+import { PageSlide } from "@/components/duo/page-slide";
+import { PullToRefresh } from "@/components/duo/pull-to-refresh";
 import { AppHeader } from "@/components/duo/app-header";
 import { DuoAvatar } from "@/components/duo/avatar";
 import { SetupRequired } from "@/components/duo/setup-required";
@@ -26,70 +28,74 @@ export default async function HomePage() {
   const name = profile?.display_name ?? "You";
 
   return (
-    <div className="flex min-h-dvh flex-col max-sm:pb-28">
-      <div className="max-sm:hidden">
-        <AppHeader name={name} hue={profile?.avatar_hue ?? 20} />
-      </div>
-      <PhoneLargeTitle
-        title="Rooms"
-        action={
-          <CreateRoomDialog
-            trigger={
-              <button
-                type="button"
-                aria-label="New room"
-                className="mb-1.5 grid size-10 place-items-center rounded-full bg-coral text-ink-0 active:scale-95"
-              >
-                <Plus className="size-5" strokeWidth={2.6} />
-              </button>
-            }
-          />
-        }
-      />
-      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-10 px-4 pt-4 pb-16 max-sm:gap-8 max-sm:px-0 max-sm:pt-2 max-sm:pb-4 sm:px-6">
-        {/* Phones: the invite box sits under the list; the greeting and buttons are desktop-only. */}
-        <section className="flex flex-col justify-between gap-6 max-sm:order-last max-sm:px-4 md:flex-row md:items-end">
-          <div className="max-sm:hidden">
-            <h1 className="text-4xl font-extrabold sm:text-5xl">Hey {name} 👋</h1>
-            <p className="mt-2 text-lg text-muted-foreground">Pick up where you left off, or open a new space.</p>
-            <div className="mt-3">
-              <AlertsControl />
-            </div>
-          </div>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
-            <p className="px-1 text-[13px] font-semibold text-muted-foreground uppercase sm:hidden">Have an invite?</p>
-            <JoinCodeForm />
-            <span className="max-sm:hidden">
-              <CreateRoomDialog />
-            </span>
-          </div>
-        </section>
+    <PageSlide>
+      <div className="flex min-h-dvh flex-col max-sm:pb-28">
+        <div className="max-sm:hidden">
+          <AppHeader name={name} hue={profile?.avatar_hue ?? 20} />
+        </div>
+        <PhoneLargeTitle
+          title="Rooms"
+          action={
+            <CreateRoomDialog
+              trigger={
+                <button
+                  type="button"
+                  aria-label="New room"
+                  className="mb-1.5 grid size-10 place-items-center rounded-full bg-coral text-ink-0 active:scale-95"
+                >
+                  <Plus className="size-5" strokeWidth={2.6} />
+                </button>
+              }
+            />
+          }
+        />
+        <PullToRefresh>
+          <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-10 px-4 pt-4 pb-16 max-sm:gap-8 max-sm:px-0 max-sm:pt-2 max-sm:pb-4 sm:px-6">
+            {/* Phones: the invite box sits under the list; the greeting and buttons are desktop-only. */}
+            <section className="flex flex-col justify-between gap-6 max-sm:order-last max-sm:px-4 md:flex-row md:items-end">
+              <div className="max-sm:hidden">
+                <h1 className="text-4xl font-extrabold sm:text-5xl">Hey {name} 👋</h1>
+                <p className="mt-2 text-lg text-muted-foreground">Pick up where you left off, or open a new space.</p>
+                <div className="mt-3">
+                  <AlertsControl />
+                </div>
+              </div>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+                <p className="px-1 text-[13px] font-semibold text-muted-foreground uppercase sm:hidden">Have an invite?</p>
+                <JoinCodeForm />
+                <span className="max-sm:hidden">
+                  <CreateRoomDialog />
+                </span>
+              </div>
+            </section>
 
-        {rooms.length === 0 ? (
-          <EmptyState />
-        ) : (
-          <HomePresence
-            myId={user.id}
-            rooms={rooms.map((r) => ({
-              id: r.id,
-              slug: r.slug,
-              name: r.name,
-              partnerName: r.members.find((m) => m.userId !== user.id)?.displayName ?? null,
-            }))}
-          >
-            <ul
-              className="grid gap-4 max-sm:mx-4 max-sm:gap-0 max-sm:divide-y max-sm:divide-white/6 max-sm:overflow-hidden max-sm:rounded-2xl max-sm:bg-ink-2 sm:grid-cols-2 lg:grid-cols-3"
-              aria-label="Your rooms"
-            >
-              {rooms.map((room) => (
-                <RoomCard key={room.id} room={room} myId={user.id} />
-              ))}
-            </ul>
-          </HomePresence>
-        )}
-      </main>
-      <PhoneTabBar />
-    </div>
+            {rooms.length === 0 ? (
+              <EmptyState />
+            ) : (
+              <HomePresence
+                myId={user.id}
+                rooms={rooms.map((r) => ({
+                  id: r.id,
+                  slug: r.slug,
+                  name: r.name,
+                  partnerName: r.members.find((m) => m.userId !== user.id)?.displayName ?? null,
+                }))}
+              >
+                <ul
+                  className="grid gap-4 max-sm:mx-4 max-sm:gap-0 max-sm:divide-y max-sm:divide-white/6 max-sm:overflow-hidden max-sm:rounded-2xl max-sm:bg-ink-2 sm:grid-cols-2 lg:grid-cols-3"
+                  aria-label="Your rooms"
+                >
+                  {rooms.map((room) => (
+                    <RoomCard key={room.id} room={room} myId={user.id} />
+                  ))}
+                </ul>
+              </HomePresence>
+            )}
+          </main>
+        </PullToRefresh>
+        <PhoneTabBar />
+      </div>
+    </PageSlide>
   );
 }
 
@@ -137,7 +143,7 @@ function RoomCard({ room, myId }: { room: RoomWithMembers; myId: string }) {
           size="sm"
           className="max-sm:absolute max-sm:inset-0 max-sm:h-auto max-sm:rounded-none max-sm:bg-transparent max-sm:text-transparent max-sm:shadow-none"
         >
-          <Link href={`/r/${room.slug}`}>
+          <Link href={`/r/${room.slug}`} transitionTypes={["nav-forward"]}>
             Enter <ArrowRight />
           </Link>
         </Button>

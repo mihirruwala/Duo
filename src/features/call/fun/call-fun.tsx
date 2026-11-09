@@ -1,5 +1,6 @@
 "use client";
 
+import { haptic } from "@/lib/haptics";
 import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react";
 import { useRoomContext } from "@livekit/components-react";
 import { RoomEvent, type RemoteParticipant } from "livekit-client";
@@ -47,6 +48,7 @@ export function useCallFun() {
       if (now - lastSent.current < 250) return; // a little throttle
       lastSent.current = now;
       show(emoji, "You");
+      haptic("light");
       void publish({ v: 1, t: "react", emoji });
     },
     [publish, show],

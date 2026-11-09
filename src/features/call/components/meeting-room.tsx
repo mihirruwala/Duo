@@ -1,5 +1,6 @@
 "use client";
 
+import { haptic } from "@/lib/haptics";
 import { useCallback, useEffect, useEffectEvent, useState } from "react";
 import {
   isTrackReference,
@@ -175,6 +176,7 @@ export function MeetingRoom({
       }
       if (cancelled) return;
       setRoom(current);
+      haptic("success");
       // Reconnect health: LiveKit can report "connected" after a long outage while the other person's
       // tracks were dropped (full rejoin under a new participant id, or a resume that lost them).
       // If that happens, rejoin cleanly instead of leaving a frozen call.
@@ -222,6 +224,7 @@ export function MeetingRoom({
   }, [connection, prefs]);
 
   async function leave() {
+    haptic("medium");
     await room?.disconnect(true);
     onLeave({ kind: "left" });
   }
@@ -295,6 +298,7 @@ function CallLayout({ roomName, partnerName, onLeave }: { roomName: string; part
   const remote = remotes[0];
 
   async function toggleMic() {
+    haptic("selection");
     try {
       await localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled, AUDIO_OPTS);
     } catch (err) {
@@ -302,6 +306,7 @@ function CallLayout({ roomName, partnerName, onLeave }: { roomName: string; part
     }
   }
   async function toggleCam() {
+    haptic("selection");
     try {
       // Options only apply when the camera is first published (e.g. turned on during hang-out mode).
       await localParticipant.setCameraEnabled(!isCameraEnabled, ...cameraOptionsFor(hangout.mode));

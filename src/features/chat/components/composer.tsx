@@ -1,5 +1,6 @@
 "use client";
 
+import { haptic } from "@/lib/haptics";
 import { useEffect, useRef, useState } from "react";
 import { FileUp, Loader2, Mic, Paperclip, SendHorizontal, Sticker, Trash2, Video, X } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -56,6 +57,7 @@ export function Composer({
   function send() {
     if (!text.trim() || over) return;
     chat.sendText(text, replyTo);
+    haptic("light");
     setText("");
     onCancelReply();
     inputRef.current?.focus();
