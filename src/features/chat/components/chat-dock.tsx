@@ -1,7 +1,22 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Bookmark, Images, ListChecks, MessageCircle, Minus, MoveDiagonal2, Upload, X } from "lucide-react";
+import Link from "next/link";
+import {
+  Bookmark,
+  ChevronLeft,
+  Images,
+  ListChecks,
+  MessageCircle,
+  Minus,
+  MoveDiagonal2,
+  PhoneCall,
+  Upload,
+  Video,
+  X,
+} from "lucide-react";
+import { usePhone } from "@/lib/use-phone";
+import { setPhoneSheet } from "@/features/rooms/phone-room-store";
 import { ListsPanel } from "@/features/lists/components/lists-panel";
 import { useCallOpen } from "@/features/call/watch/watch-events";
 import { DOCKED_WIDTH, PREF_KEY, restoreDock, setDockOpen, useDock } from "../dock-store";
@@ -42,8 +57,10 @@ function saveSize(size: Size) {
  * docks beside the video on wide screens (the call makes room for it) and is opened from the call's
  * control bar, so it never covers your person.
  */
-export function ChatDock({ roomId, gifsEnabled }: { roomId: string; gifsEnabled: boolean }) {
+export function ChatDock({ roomId, roomName, gifsEnabled }: { roomId: string; roomName: string; gifsEnabled: boolean }) {
   const chat = useChat();
+  // Phones, outside a call: the chat *is* the room screen (always open, with the room's top bar).
+  const phone = usePhone();
   // Until saved prefs are restored we render nothing, so a dock that was open doesn't flash closed.
   const { open, restored } = useDock();
   const inCall = useCallOpen();
@@ -113,9 +130,10 @@ export function ChatDock({ roomId, gifsEnabled }: { roomId: string; gifsEnabled:
     });
   }
 
-  if (!restored) return null;
+  if (!restored || phone === null) return null;
+  const roomScreen = phone && !inCall;
 
-  if (!open) {
+  if (!open && !roomScreen) {
     // In a call the control bar has the Chat button (with the unread count); no floating pill over the video.
     if (inCall) return null;
     return (
@@ -165,7 +183,9 @@ export function ChatDock({ roomId, gifsEnabled }: { roomId: string; gifsEnabled:
           }
         }}
         data-docked={inCall ? "" : undefined}
+        data-room-screen={roomScreen ? "" : undefined}
         className={cn(
+          roomScreen && "!z-40 !bg-background !backdrop-blur-none",
           "glass fixed inset-0 z-50 flex flex-col overflow-hidden shadow-2xl sm:inset-auto sm:right-4 sm:bottom-4 sm:max-h-[calc(100dvh-2rem)] sm:max-w-[calc(100vw-2rem)] sm:rounded-[1.75rem] sm:[height:var(--dock-h)] sm:[width:var(--dock-w)]",
           // Docked beside the call on wide screens: full height, fixed width, flush to the edge.
           // Mid-size screens: float, but end above the call's control bar.
@@ -194,43 +214,56 @@ export function ChatDock({ roomId, gifsEnabled }: { roomId: string; gifsEnabled:
           <MoveDiagonal2 className="size-3.5" />
         </button>
 
-        <header className={cn("flex items-center gap-2 border-b border-border px-4 pt-3 pb-2 sm:pl-9", inCall && "lg:pl-4")}>
-          {chat.partner ? (
-            <span className="relative">
-              <DuoAvatar name={chat.partner.name} hue={chat.partner.hue} size="sm" />
-              <span
-                className={cn(
-                  "absolute -right-0.5 -bottom-0.5 size-3 rounded-full ring-2 ring-ink-2",
-                  chat.partnerOnline ? "bg-mint" : "bg-ink-4",
-                )}
-                role="img"
-                aria-label={chat.partnerOnline ? "Online" : "Offline"}
-                data-testid="presence"
-                data-online={chat.partnerOnline ? "" : undefined}
-              />
-            </span>
-          ) : null}
-          <span className="min-w-0 flex-1">
-            <span className="block truncate font-bold">{chat.partner?.name ?? "Chat"}</span>
-            <span className="block text-xs text-muted-foreground">
-              {!chat.connected ? "Connecting…" : chat.partnerTyping ? "typing…" : chat.partnerOnline ? "Online" : "Away"}
-            </span>
-          </span>
-          <button
-            type="button"
-            onClick={() => setOpenPersist(false)}
-            aria-label={inCall ? "Close chat" : "Minimize chat"}
-            data-testid="chat-minimize"
-            className="grid size-8 place-items-center rounded-lg text-muted-foreground hover:bg-ink-3 hover:text-foreground"
+        {roomScreen ? (
+          <PhoneRoomBar roomName={roomName} />
+        ) : (
+          <header
+            className={cn(
+              "flex items-center gap-2 border-b border-border px-4 pt-3 pb-2 max-sm:pt-[calc(env(safe-area-inset-top)+0.75rem)] sm:pl-9",
+              inCall && "lg:pl-4",
+            )}
           >
-            {inCall ? <X className="size-4" /> : <Minus className="size-4" />}
-          </button>
-        </header>
+            {chat.partner ? (
+              <span className="relative">
+                <DuoAvatar name={chat.partner.name} hue={chat.partner.hue} size="sm" />
+                <span
+                  className={cn(
+                    "absolute -right-0.5 -bottom-0.5 size-3 rounded-full ring-2 ring-ink-2",
+                    chat.partnerOnline ? "bg-mint" : "bg-ink-4",
+                  )}
+                  role="img"
+                  aria-label={chat.partnerOnline ? "Online" : "Offline"}
+                  data-testid="presence"
+                  data-online={chat.partnerOnline ? "" : undefined}
+                />
+              </span>
+            ) : null}
+            <span className="min-w-0 flex-1">
+              <span className="block truncate font-bold">{chat.partner?.name ?? "Chat"}</span>
+              <span className="block text-xs text-muted-foreground">
+                {!chat.connected ? "Connecting…" : chat.partnerTyping ? "typing…" : chat.partnerOnline ? "Online" : "Away"}
+              </span>
+            </span>
+            <button
+              type="button"
+              onClick={() => setOpenPersist(false)}
+              aria-label={inCall ? "Close chat" : "Minimize chat"}
+              data-testid="chat-minimize"
+              className="grid size-8 place-items-center rounded-lg text-muted-foreground hover:bg-ink-3 hover:text-foreground"
+            >
+              {inCall ? <X className="size-4" /> : <Minus className="size-4" />}
+            </button>
+          </header>
+        )}
 
         <div
           role="tablist"
           aria-label="Chat sections"
-          className="flex gap-0.5 overflow-x-auto border-b border-border px-2 py-1.5"
+          className={cn(
+            "flex gap-0.5 overflow-x-auto border-b border-border px-2 py-1.5",
+            // Phones: an iOS-style segmented control.
+            "max-sm:mx-3 max-sm:my-2 max-sm:grid max-sm:grid-cols-4 max-sm:rounded-xl max-sm:border-0 max-sm:bg-ink-1 max-sm:p-0.5",
+          )}
         >
           {(
             [
@@ -248,10 +281,11 @@ export function ChatDock({ roomId, gifsEnabled }: { roomId: string; gifsEnabled:
               onClick={() => setTab(id)}
               className={cn(
                 "flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-semibold transition-colors",
-                tab === id ? "bg-ink-3 text-foreground" : "text-muted-foreground hover:text-foreground",
+                "max-sm:justify-center max-sm:rounded-[0.6rem] max-sm:px-1 max-sm:text-[13px]",
+                tab === id ? "bg-ink-3 text-foreground max-sm:shadow-sm" : "text-muted-foreground hover:text-foreground",
               )}
             >
-              <Icon className="size-4" /> {label}
+              <Icon className="size-4 max-sm:hidden" /> {label}
             </button>
           ))}
         </div>
@@ -276,5 +310,80 @@ export function ChatDock({ roomId, gifsEnabled }: { roomId: string; gifsEnabled:
       </section>
       <ImageViewer items={viewer?.items ?? []} openId={viewer?.id ?? null} onClose={() => setViewer(null)} />
     </>
+  );
+}
+
+/** Phone room screen's top bar: back, who you're with (tap for room info), and the call button. */
+function PhoneRoomBar({ roomName }: { roomName: string }) {
+  const chat = useChat();
+  const p = chat.partnerPresence;
+  const status = !chat.connected
+    ? "Connecting…"
+    : chat.partnerTyping
+      ? "typing…"
+      : p.inCall
+        ? "In a call"
+        : p.where === "room"
+          ? "Here in the room"
+          : p.online
+            ? "Online"
+            : chat.partner
+              ? "Away"
+              : "Waiting for your person to join";
+  return (
+    <header className="flex items-center gap-1 border-b border-border/60 bg-ink-1/80 px-1.5 pt-[calc(env(safe-area-inset-top)+0.375rem)] pb-1.5 backdrop-blur-xl">
+      <Link href="/home" aria-label="All rooms" className="grid size-11 shrink-0 place-items-center text-coral">
+        <ChevronLeft className="size-7" strokeWidth={2.4} />
+      </Link>
+      <button
+        type="button"
+        onClick={() => setPhoneSheet("info")}
+        aria-label="Room info"
+        data-testid="room-info-button"
+        className="flex min-w-0 flex-1 items-center gap-2.5 rounded-xl py-1 text-left active:bg-ink-3/50"
+      >
+        {chat.partner && (
+          <span className="relative shrink-0">
+            <DuoAvatar name={chat.partner.name} hue={chat.partner.hue} size="sm" />
+            <span
+              className={cn(
+                "absolute -right-0.5 -bottom-0.5 size-3 rounded-full ring-2 ring-ink-1",
+                p.inCall ? "bg-coral" : chat.partnerOnline ? "bg-mint" : "bg-ink-4",
+              )}
+              role="img"
+              aria-label={chat.partnerOnline ? "Online" : "Offline"}
+              data-testid="presence"
+              data-online={chat.partnerOnline ? "" : undefined}
+            />
+          </span>
+        )}
+        <span className="min-w-0">
+          <span className="block truncate text-[17px] leading-tight font-bold">{chat.partner?.name ?? roomName}</span>
+          <span className={cn("block truncate text-xs", p.inCall ? "font-semibold text-coral" : "text-muted-foreground")}>
+            {chat.partner ? `${roomName} · ${status}` : status}
+          </span>
+        </span>
+      </button>
+      {p.inCall ? (
+        <button
+          type="button"
+          onClick={() => setPhoneSheet("call")}
+          data-testid="phone-call-button"
+          className="mr-1.5 flex shrink-0 items-center gap-1.5 rounded-full bg-mint px-3.5 py-2 text-sm font-bold text-ink-0 active:scale-95"
+        >
+          <PhoneCall className="size-4" /> Join
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setPhoneSheet("call")}
+          aria-label="Start a video call"
+          data-testid="phone-call-button"
+          className="grid size-11 shrink-0 place-items-center text-coral active:scale-95"
+        >
+          <Video className="size-6" />
+        </button>
+      )}
+    </header>
   );
 }

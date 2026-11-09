@@ -54,14 +54,32 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDeleg
         config.mediaTypesRequiringUserActionForPlayback = [] // the other person's audio starts on its own
         config.allowsPictureInPictureMediaPlayback = true
         config.allowsAirPlayForMediaPlayback = true
-        // Look like Safari (some embeds check), plus a marker the site can use later.
+        // Look like Safari (some embeds check), plus a marker the site uses for app-specific wording.
         config.applicationNameForUserAgent = "Version/26.0 Mobile/15E148 Safari/604.1 DUOiOS/1.0"
+        // An app doesn't pinch-zoom its own screens. (DUO's own image viewer zooms photos itself.)
+        let noZoom = """
+        (function () {
+          var m = document.querySelector('meta[name=viewport]');
+          if (!m) { m = document.createElement('meta'); m.name = 'viewport'; document.head.appendChild(m); }
+          var c = m.getAttribute('content') || 'width=device-width, initial-scale=1';
+          if (c.indexOf('maximum-scale') < 0) m.setAttribute('content', c + ', maximum-scale=1, user-scalable=no');
+          document.documentElement.classList.add('duo-ios-app');
+        })();
+        """
+        config.userContentController.addUserScript(
+            WKUserScript(source: noZoom, injectionTime: .atDocumentEnd, forMainFrameOnly: true)
+        )
 
         let background = UIColor(named: "LaunchBackground") ?? .black
         webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = self
         webView.uiDelegate = self
         webView.allowsBackForwardNavigationGestures = true
+        webView.allowsLinkPreview = false // long-press is DUO's (message actions), not a link preview
+        // The page itself doesn't rubber-band (its lists still do), and it pads around the notch itself
+        // (viewport-fit=cover), so the web view doesn't add insets of its own.
+        webView.scrollView.bounces = false
+        webView.scrollView.contentInsetAdjustmentBehavior = .never
         webView.isOpaque = false
         webView.backgroundColor = background
         webView.scrollView.backgroundColor = background

@@ -55,14 +55,14 @@ export function PresenceBanner({
           )}
         />
       </span>
-      <span className="flex-1 font-semibold">{text}</span>
+      <span className="min-w-0 flex-1 font-semibold max-sm:basis-[calc(100%-2rem)]">{text}</span>
       {tone === "call" ? (
         <Button size="sm" variant="brand" onClick={onJoin} disabled={joining} data-testid="join-partner">
           <PhoneCall /> Join now
         </Button>
       ) : tone === "here" ? (
-        <span className="flex items-center gap-1.5 text-muted-foreground">
-          <DoorOpen className="size-4" /> Join the call and they&apos;ll hear a chime
+        <span className="flex items-center gap-1.5 text-muted-foreground max-sm:basis-full max-sm:pl-5.5 max-sm:text-[13px]">
+          <DoorOpen className="size-4 max-sm:hidden" /> Join the call and they&apos;ll hear a chime
         </span>
       ) : (
         <Button

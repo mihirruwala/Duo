@@ -117,7 +117,7 @@ export function AlertsSection() {
   };
 
   return (
-    <Section title="When your person arrives" description="Saved on this browser.">
+    <Section title="When your person arrives" description="Saved on this device.">
       <label className="flex items-center justify-between gap-3 text-sm font-semibold">
         Play a chime
         <Switch checked={prefs.sound} onCheckedChange={(sound) => update({ ...prefs, sound })} aria-label="Play a chime" />
@@ -138,9 +138,14 @@ export function AlertsSection() {
           aria-label="Show notifications"
         />
       </label>
+      {perm === "unsupported" && (
+        <p className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Bell className="size-4" /> Notifications aren&apos;t available here yet. The chime still plays while DUO is open.
+        </p>
+      )}
       {perm === "denied" && (
         <p className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Bell className="size-4" /> Notifications are blocked for this site. Allow them from the lock icon in the address bar.
+          <Bell className="size-4" /> Notifications are blocked. Allow them for DUO in your browser&apos;s site settings.
         </p>
       )}
     </Section>

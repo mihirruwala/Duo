@@ -199,7 +199,9 @@ export function MomentsGrid({ onOpen }: { onOpen: (items: ViewerItem[], id: stri
         <Bookmark className="size-8 text-sun" aria-hidden />
         <p className="font-bold">No Moments yet</p>
         <p className="text-sm text-muted-foreground">
-          Hover a photo, GIF or sticker in chat and tap the bookmark to save it here, for both of you.
+          <span className="[@media(hover:none)]:hidden">Hover a photo, GIF or sticker in chat</span>
+          <span className="[@media(hover:hover)]:hidden">Press and hold a photo, GIF or sticker in chat</span> and tap the
+          bookmark to save it here, for both of you.
         </p>
       </div>
     );

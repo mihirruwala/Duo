@@ -106,7 +106,8 @@ export function ParticipantTile({
           data-testid="tile-pin"
           title={pinned ? "Unpin (or double-click the video)" : "Pin to the big spot (or double-click the video)"}
           className={cn(
-            "absolute top-2 right-2 z-[2] grid place-items-center rounded-full bg-black/50 text-white backdrop-blur transition hover:bg-black/70 focus-visible:opacity-100",
+            // Phones: no pin buttons; tapping the small video swaps it into the big spot.
+            "absolute top-2 right-2 z-[2] grid place-items-center rounded-full bg-black/50 text-white backdrop-blur transition hover:bg-black/70 focus-visible:opacity-100 max-sm:hidden",
             variant === "stage" ? "size-9" : "size-7",
             pinned
               ? "text-coral opacity-100"

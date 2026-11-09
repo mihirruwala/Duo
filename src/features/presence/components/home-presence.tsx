@@ -95,7 +95,7 @@ export function RoomPresenceStatus({ roomId, slug, partnerName }: { roomId: stri
     return (
       <span className="flex items-center gap-2 text-sm font-semibold text-coral" data-testid="room-presence" data-state="call">
         <span className="size-2 animate-pulse rounded-full bg-coral" aria-hidden /> {partnerName} is in the call
-        <Button asChild size="xs" variant="brand" className="ml-auto">
+        <Button asChild size="xs" variant="brand" className="relative z-[1] ml-auto">
           <Link href={`/r/${slug}`}>
             <PhoneCall /> Join
           </Link>

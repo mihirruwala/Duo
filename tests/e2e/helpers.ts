@@ -161,3 +161,13 @@ export async function remoteAudioPeak(page: Page, ms = 3000): Promise<number> {
     return peak;
   }, ms);
 }
+
+/** "Join call", wherever it is: on phones it's in the call sheet behind the room's call button. */
+export async function pressJoinCall(page: Page) {
+  const phoneCall = page.getByTestId("phone-call-button");
+  const join = page.getByRole("button", { name: "Join call" });
+  // The room screen renders after hydration, so wait for whichever one this layout has.
+  await expect(phoneCall.or(join).first()).toBeVisible({ timeout: 20_000 });
+  if (await phoneCall.isVisible()) await phoneCall.click();
+  await join.click();
+}

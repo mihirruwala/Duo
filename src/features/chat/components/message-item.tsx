@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { AlertCircle, Bookmark, BookmarkCheck, Copy, CornerUpLeft, Pencil, SmilePlus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -75,6 +75,31 @@ export const MessageItem = memo(function MessageItem(props: MessageItemProps) {
   const bare = m.kind === "sticker" || m.kind === "video" || ((m.kind === "gif" || m.kind === "image") && !m.body);
   const reactions = summarizeReactions(props.reactions, myId);
   const confirmed = m.status === "sent";
+  // Touch screens: actions come up on a long-press (like Messages), not on a tap.
+  const [held, setHeld] = useState(false);
+  const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const itemRef = useRef<HTMLLIElement>(null);
+  const cancelPress = () => {
+    if (pressTimer.current) clearTimeout(pressTimer.current);
+    pressTimer.current = null;
+  };
+  const onPressStart = (e: React.PointerEvent) => {
+    if (e.pointerType !== "touch" || deleted || editing || !confirmed) return;
+    cancelPress();
+    pressTimer.current = setTimeout(() => {
+      setHeld(true);
+      navigator.vibrate?.(10);
+    }, 450);
+  };
+  useEffect(() => {
+    if (!held) return;
+    const close = (e: PointerEvent) => {
+      if (!itemRef.current?.querySelector('[role="toolbar"]')?.contains(e.target as Node)) setHeld(false);
+    };
+    document.addEventListener("pointerdown", close, true);
+    return () => document.removeEventListener("pointerdown", close, true);
+  }, [held]);
+  useEffect(() => cancelPress, []);
 
   async function saveEdit() {
     if (draft.trim() === (m.body ?? "").trim()) return setEditing(false);
@@ -85,6 +110,7 @@ export const MessageItem = memo(function MessageItem(props: MessageItemProps) {
 
   return (
     <li
+      ref={itemRef}
       id={`msg-${m.id}`}
       data-testid="chat-message"
       data-mine={mine ? "" : undefined}
@@ -104,8 +130,18 @@ export const MessageItem = memo(function MessageItem(props: MessageItemProps) {
         <div
           tabIndex={0}
           aria-label={`${mine ? "You" : (sender?.name ?? "Someone")}: ${replySnippet(m)}`}
+          onPointerDown={onPressStart}
+          onPointerUp={cancelPress}
+          onPointerCancel={cancelPress}
+          onPointerMove={(e) => e.pointerType === "touch" && Math.abs(e.movementY) > 2 && cancelPress()}
+          onContextMenu={(e) => {
+            // The long-press is ours on touch screens; no system menu on top of it.
+            if (window.matchMedia("(hover: none)").matches) e.preventDefault();
+          }}
           className={cn(
-            "relative min-w-0 rounded-3xl outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            "relative min-w-0 rounded-3xl outline-none transition-transform focus-visible:ring-2 focus-visible:ring-ring",
+            "[@media(hover:none)]:[-webkit-touch-callout:none] [@media(hover:none)]:select-none",
+            held && "scale-[1.03]",
             !bare && "px-3.5 py-2",
             !bare && (mine ? "rounded-br-lg bg-coral/18 text-cream" : "rounded-bl-lg bg-ink-3"),
             deleted && "bg-transparent px-1 py-0",
@@ -178,13 +214,23 @@ export const MessageItem = memo(function MessageItem(props: MessageItemProps) {
           <div
             className={cn(
               "absolute -top-4 z-10 flex items-center gap-0.5 rounded-xl border border-border bg-popover p-0.5 opacity-0 shadow-lg transition-opacity group-focus-within/msg:opacity-100 group-hover/msg:opacity-100",
+              // Touch: only after a long-press, a little higher so the finger doesn't cover it.
+              "[@media(hover:none)]:pointer-events-none [@media(hover:none)]:-top-12 [@media(hover:none)]:!opacity-0 [@media(hover:none)]:rounded-2xl",
               mine ? "right-2" : "left-2",
               (pickerOpen || confirmDelete) && "opacity-100",
+              (held || pickerOpen || confirmDelete) &&
+                "[@media(hover:none)]:pointer-events-auto [@media(hover:none)]:!opacity-100",
             )}
             role="toolbar"
             aria-label="Message actions"
           >
-            <Action label="Reply" onClick={() => props.onReply(m.id)}>
+            <Action
+              label="Reply"
+              onClick={() => {
+                setHeld(false);
+                props.onReply(m.id);
+              }}
+            >
               <CornerUpLeft />
             </Action>
             <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
@@ -331,7 +377,7 @@ function Action({ label, onClick, children }: { label: string; onClick: () => vo
           type="button"
           onClick={onClick}
           aria-label={label}
-          className="grid size-7 place-items-center rounded-lg text-muted-foreground hover:bg-ink-3 hover:text-foreground [&_svg]:size-4"
+          className="grid size-7 place-items-center rounded-lg text-muted-foreground hover:bg-ink-3 hover:text-foreground [&_svg]:size-4 [@media(hover:none)]:size-10 [@media(hover:none)]:[&_svg]:size-5"
         >
           {children}
         </button>

@@ -14,6 +14,7 @@ import {
   Popcorn,
   SmilePlus,
   Sofa,
+  SwitchCamera,
   Sparkles,
   Video,
   VideoOff,
@@ -88,6 +89,7 @@ export function CallControls({
   effectsPaused,
   hangout,
   onToggleHangout,
+  onFlipCamera,
   onReact,
   onPhotoBooth,
   onWatch,
@@ -117,6 +119,8 @@ export function CallControls({
   hangout?: boolean;
   /** Toggle hang-out mode: a light, open line for hours. */
   onToggleHangout?: () => void;
+  /** Phones: front ↔ back camera (in the More menu). */
+  onFlipCamera?: () => void;
   onReact?: (emoji: (typeof CALL_REACTIONS)[number]) => void;
   onPhotoBooth?: () => void;
   /** Start (or, while watching, change) Watch Together. */
@@ -306,6 +310,11 @@ export function CallControls({
               {onOpenStudio && (
                 <DropdownMenuItem onSelect={onOpenStudio} disabled={effectsPaused}>
                   <Sparkles /> Effects{effectsPaused ? " (paused)" : effectsOn ? " (on)" : ""}
+                </DropdownMenuItem>
+              )}
+              {onFlipCamera && (
+                <DropdownMenuItem onSelect={onFlipCamera}>
+                  <SwitchCamera /> Switch camera
                 </DropdownMenuItem>
               )}
               {onToggleHangout && (

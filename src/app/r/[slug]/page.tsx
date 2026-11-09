@@ -30,8 +30,11 @@ export default async function RoomPage({ params }: PageProps<"/r/[slug]">) {
 
   return (
     <div className="flex min-h-dvh flex-col">
-      <AppHeader name={profile?.display_name ?? "You"} hue={profile?.avatar_hue ?? 20} />
-      <div className="mx-auto w-full max-w-6xl px-4 pb-2 sm:px-6">
+      {/* Phones get the room's own top bar instead (in the chat screen). */}
+      <div className="max-sm:hidden">
+        <AppHeader name={profile?.display_name ?? "You"} hue={profile?.avatar_hue ?? 20} />
+      </div>
+      <div className="mx-auto w-full max-w-6xl px-4 pb-2 max-sm:hidden sm:px-6">
         <Link href="/home" className="inline-flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="size-4" /> All rooms
         </Link>
@@ -51,7 +54,7 @@ export default async function RoomPage({ params }: PageProps<"/r/[slug]">) {
 
 function RoomDetails({ room, me, partner }: { room: RoomWithMembers; me: RoomMember; partner: RoomMember | null }) {
   return (
-    <div className="surface flex flex-col gap-5 rounded-[2rem] p-6">
+    <div className="surface flex flex-col gap-5 rounded-[2rem] p-6 max-sm:border-0 max-sm:bg-transparent max-sm:p-1 max-sm:shadow-none">
       <p className="inline-flex items-center gap-1.5 text-sm text-mint">
         <Lock className="size-3.5" aria-hidden /> Private room · {partner ? "locked to you two" : "1 seat open"}
       </p>

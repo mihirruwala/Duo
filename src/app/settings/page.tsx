@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { AppHeader } from "@/components/duo/app-header";
+import { PhoneLargeTitle, PhoneTabBar } from "@/components/duo/phone-tab-bar";
 import { SetupRequired } from "@/components/duo/setup-required";
 import { AccountSection, AlertsSection, ProfileForm } from "@/features/settings/components/settings-forms";
 import { getMyProfile } from "@/features/rooms/server/queries";
@@ -20,17 +21,24 @@ export default async function SettingsPage() {
   const hue = profile?.avatar_hue ?? 20;
 
   return (
-    <div className="flex min-h-dvh flex-col">
-      <AppHeader name={name} hue={hue} />
-      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-4 pt-2 pb-16 sm:px-6">
-        <Link href="/home" className="inline-flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+    <div className="flex min-h-dvh flex-col max-sm:pb-28">
+      <div className="max-sm:hidden">
+        <AppHeader name={name} hue={hue} />
+      </div>
+      <PhoneLargeTitle title="Settings" />
+      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-4 pt-2 pb-16 max-sm:gap-5 max-sm:pb-4 sm:px-6">
+        <Link
+          href="/home"
+          className="inline-flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground max-sm:hidden"
+        >
           <ArrowLeft className="size-4" /> All rooms
         </Link>
-        <h1 className="text-4xl font-extrabold">Settings</h1>
+        <h1 className="text-4xl font-extrabold max-sm:hidden">Settings</h1>
         <ProfileForm userId={user.id} initialName={name} initialHue={hue} />
         <AlertsSection />
         <AccountSection email={user.email ?? ""} />
       </main>
+      <PhoneTabBar />
     </div>
   );
 }

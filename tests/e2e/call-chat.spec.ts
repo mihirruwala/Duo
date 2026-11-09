@@ -1,12 +1,12 @@
 import type { Page } from "@playwright/test";
 import { expect, hasBackend, test } from "./fixtures";
-import { createJoinedRoom, expectVideoPlaying, newUserPage } from "./helpers";
+import { createJoinedRoom, expectVideoPlaying, newUserPage, pressJoinCall } from "./helpers";
 
 test.skip(!hasBackend || !process.env.NEXT_PUBLIC_LIVEKIT_URL, "Supabase + LiveKit env required");
 
 async function joinCall(pages: Page[]) {
   for (const p of pages) {
-    await p.getByRole("button", { name: "Join call" }).click();
+    await pressJoinCall(p);
     await expect(p.getByTestId("meeting-room")).toBeVisible({ timeout: 20_000 });
   }
   for (const p of pages) await expectVideoPlaying(p, '[data-testid="tile-remote"]');

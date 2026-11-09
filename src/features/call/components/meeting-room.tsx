@@ -58,6 +58,7 @@ import { ScreenShareStage } from "./screen-share-stage";
 import { cameraOptionsFor, useHangout } from "../hangout/use-hangout";
 import { HangoutBanner, PartnerModeChip, SleepScreen } from "../hangout/hangout-ui";
 import { useTabSync } from "../tab-sync/use-tab-sync";
+import { usePhone } from "@/lib/use-phone";
 import { TabSyncBanner, TabSyncDialog } from "../tab-sync/tab-sync-ui";
 
 export type LeaveReason = { kind: "left" } | { kind: "duplicate" } | { kind: "removed" } | { kind: "failed"; message: string };
@@ -260,6 +261,7 @@ function CallLayout({ roomName, partnerName, onLeave }: { roomName: string; part
   const hangout = useHangout();
   const hangingOut = hangout.mode !== "normal";
   const studio = useStudioTrack(FEATURES.studio ? cameraVideo : undefined, hangingOut);
+  const room = useRoomContext();
   const [studioOpen, setStudioOpen] = useState(false);
   const remotes = useRemoteParticipants();
   const { canPlayAudio, startAudio } = useAudioPlayback();
@@ -478,73 +480,113 @@ function CallLayout({ roomName, partnerName, onLeave }: { roomName: string; part
     onLeave();
   }
 
+  const phoneCall = usePhone() === true;
+  const [chromeHidden, setChromeHidden] = useState(false);
+  // Once your person is on screen, the controls fade after a few seconds; a tap brings them back.
+  useEffect(() => {
+    if (!phoneCall || chromeHidden || !remote || watch.session || share) return;
+    const t = setTimeout(() => setChromeHidden(true), 5000);
+    return () => clearTimeout(t);
+  }, [phoneCall, chromeHidden, remote, watch.session, share]);
+
+  /** Phones: front ↔ back camera. */
+  async function flipCamera() {
+    const cams = await Room.getLocalDevices("videoinput").catch(() => [] as MediaDeviceInfo[]);
+    if (cams.length < 2) return void toast.info("Only one camera found.");
+    const current = room.getActiveDevice("videoinput");
+    const i = cams.findIndex((d) => d.deviceId === current);
+    const next = cams[(i + 1) % cams.length]!;
+    await room.switchActiveDevice("videoinput", next.deviceId).catch(() => toast.error("Couldn't switch camera."));
+  }
+
   const setHangoutMode = hangout.setMode;
   const wake = useCallback(() => setHangoutMode("hangout"), [setHangoutMode]);
 
   const reconnecting = state === ConnectionState.Reconnecting || state === ConnectionState.SignalReconnecting;
   const shareBlockedBy = share && !share.participant.isLocal ? share.participant.name || "Your person" : null;
 
+  // Phones: the header and controls float over full-screen video; a tap on the video hides them.
+  const chromeClass = cn(
+    "max-sm:transition-opacity max-sm:duration-300",
+    chromeHidden && "max-sm:pointer-events-none max-sm:opacity-0",
+  );
+
   return (
     <>
-      <header className="flex items-center gap-3 px-4 pt-4 sm:px-6">
-        <span className="flex min-w-0 items-center gap-2">
-          <Lock className="size-4 shrink-0 text-mint" aria-hidden />
-          <h1 className="truncate text-lg font-bold">{roomName}</h1>
-        </span>
-        <EncryptionBadge />
-        {remote && <PartnerModeChip mode={hangout.partnerMode} name={remote.name || partnerName || "Your person"} />}
-        {pipSupported() && (
-          <Button
-            size="sm"
-            variant="ghost"
-            className="ml-auto"
-            onClick={() => void (pip.pipWindow ? pip.close() : pip.open())}
-            aria-pressed={!!pip.pipWindow}
-            data-testid="pop-out"
-          >
-            <PictureInPicture2 /> {pip.pipWindow ? "Close mini window" : "Pop out"}
-          </Button>
+      <div
+        className={cn(
+          "max-sm:absolute max-sm:inset-x-0 max-sm:top-0 max-sm:z-20 max-sm:bg-gradient-to-b max-sm:from-black/60 max-sm:to-transparent max-sm:pt-[env(safe-area-inset-top)] max-sm:pb-4",
+          chromeClass,
         )}
-        <span
-          role="status"
-          data-testid="connection-state"
-          data-state={state}
-          className={cn(
-            "flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold",
-            !pipSupported() && "ml-auto",
-            reconnecting ? "bg-sun/15 text-sun" : "bg-mint/10 text-mint",
+      >
+        <header className="flex items-center gap-3 px-4 pt-4 max-sm:pt-2 sm:px-6">
+          <span className="flex min-w-0 items-center gap-2">
+            <Lock className="size-4 shrink-0 text-mint" aria-hidden />
+            <h1 className="truncate text-lg font-bold">{roomName}</h1>
+          </span>
+          <EncryptionBadge />
+          {remote && <PartnerModeChip mode={hangout.partnerMode} name={remote.name || partnerName || "Your person"} />}
+          {pipSupported() && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="ml-auto max-sm:hidden"
+              onClick={() => void (pip.pipWindow ? pip.close() : pip.open())}
+              aria-pressed={!!pip.pipWindow}
+              data-testid="pop-out"
+            >
+              <PictureInPicture2 /> {pip.pipWindow ? "Close mini window" : "Pop out"}
+            </Button>
           )}
-        >
-          {reconnecting ? <Loader2 className="size-3.5 animate-spin" /> : <span className="size-2 rounded-full bg-mint" />}
-          {reconnecting ? "Reconnecting…" : "Connected"}
-        </span>
-      </header>
+          <span
+            role="status"
+            data-testid="connection-state"
+            data-state={state}
+            className={cn(
+              "flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold",
+              !pipSupported() && "ml-auto",
+              "max-sm:ml-auto",
+              reconnecting ? "bg-sun/15 text-sun" : "bg-mint/10 text-mint max-sm:sr-only",
+            )}
+          >
+            {reconnecting ? <Loader2 className="size-3.5 animate-spin" /> : <span className="size-2 rounded-full bg-mint" />}
+            {reconnecting ? "Reconnecting…" : "Connected"}
+          </span>
+        </header>
 
-      {reconnecting && (
-        <div
-          role="alert"
-          className="mx-4 mt-3 flex items-center gap-2 rounded-2xl border border-sun/30 bg-sun/10 px-4 py-2 text-sm text-sun sm:mx-6"
-        >
-          <WifiOff className="size-4" /> Your connection dropped. Reconnecting automatically, hang tight.
-        </div>
-      )}
+        {reconnecting && (
+          <div
+            role="alert"
+            className="mx-4 mt-3 flex items-center gap-2 rounded-2xl border border-sun/30 bg-sun/10 px-4 py-2 text-sm text-sun sm:mx-6"
+          >
+            <WifiOff className="size-4" /> Your connection dropped. Reconnecting automatically, hang tight.
+          </div>
+        )}
 
-      <TabSyncBanner sync={tabSync} onStart={startTabSync} />
+        <TabSyncBanner sync={tabSync} onStart={startTabSync} />
 
-      {hangout.mode === "hangout" && (
-        <HangoutBanner onSleep={() => hangout.setMode("sleep")} onOff={() => hangout.setMode("normal")} />
-      )}
+        {hangout.mode === "hangout" && (
+          <HangoutBanner onSleep={() => hangout.setMode("sleep")} onOff={() => hangout.setMode("normal")} />
+        )}
 
-      {!canPlayAudio && (
-        <div className="mx-4 mt-3 flex items-center justify-between gap-3 rounded-2xl border border-border bg-ink-2 px-4 py-2 text-sm sm:mx-6">
-          <span>Your browser paused call audio.</span>
-          <Button size="sm" onClick={() => void startAudio()}>
-            <Volume2 /> Turn on sound
-          </Button>
-        </div>
-      )}
+        {!canPlayAudio && (
+          <div className="mx-4 mt-3 flex items-center justify-between gap-3 rounded-2xl border border-border bg-ink-2 px-4 py-2 text-sm sm:mx-6">
+            <span>Your browser paused call audio.</span>
+            <Button size="sm" onClick={() => void startAudio()}>
+              <Volume2 /> Turn on sound
+            </Button>
+          </div>
+        )}
+      </div>
 
-      <main className="flex min-h-0 flex-1 flex-col gap-3 p-4 sm:p-6">
+      <main
+        className="flex min-h-0 flex-1 flex-col gap-3 p-4 max-sm:p-0 sm:p-6"
+        onClick={(e) => {
+          if (!phoneCall) return;
+          if ((e.target as HTMLElement).closest("button,a,input,iframe,[role=slider],[data-no-chrome-toggle]")) return;
+          setChromeHidden((h) => !h);
+        }}
+      >
         <CallStage
           localCam={localCam}
           remoteCam={remoteCam}
@@ -555,7 +597,12 @@ function CallLayout({ roomName, partnerName, onLeave }: { roomName: string; part
         />
       </main>
 
-      <footer className="flex justify-center px-4 pb-5">
+      <footer
+        className={cn(
+          "flex justify-center px-4 pb-5 max-sm:absolute max-sm:inset-x-0 max-sm:bottom-0 max-sm:z-20 max-sm:bg-gradient-to-t max-sm:from-black/50 max-sm:to-transparent max-sm:pt-10 max-sm:pb-[max(1rem,env(safe-area-inset-bottom))]",
+          chromeClass,
+        )}
+      >
         <CallControls
           micOn={isMicrophoneEnabled}
           camOn={isCameraEnabled}
@@ -582,6 +629,7 @@ function CallLayout({ roomName, partnerName, onLeave }: { roomName: string; part
           effectsPaused={hangingOut}
           hangout={hangingOut}
           onToggleHangout={() => hangout.setMode(hangingOut ? "normal" : "hangout")}
+          onFlipCamera={isCameraEnabled ? () => void flipCamera() : undefined}
           onReact={fun.react}
           onPhotoBooth={fun.canBooth ? fun.startBooth : undefined}
           chat={chat ? { open: dock.open, unread: chat.unread, onToggle: () => setDockOpen(!dock.open) } : undefined}
@@ -642,7 +690,7 @@ function WaitingTile({ partnerName, left }: { partnerName: string | null; left: 
   return (
     <div
       data-testid="waiting-tile"
-      className="grid aspect-video w-full place-items-center rounded-[1.75rem] border-2 border-dashed border-ink-4 bg-ink-1/60 p-6 text-center"
+      className="grid aspect-video w-full place-items-center rounded-[1.75rem] border-2 border-dashed border-ink-4 bg-ink-1/60 p-6 text-center max-sm:mx-auto max-sm:w-[calc(100%-2rem)]"
     >
       <div className="flex flex-col items-center gap-2">
         <span className="text-4xl" aria-hidden>

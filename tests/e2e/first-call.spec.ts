@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { expect, hasBackend, test } from "./fixtures";
-import { expectVideoPlaying, newUserPage, remoteAudioPeak } from "./helpers";
+import { expectVideoPlaying, newUserPage, remoteAudioPeak, pressJoinCall } from "./helpers";
 
 test.skip(!hasBackend || !process.env.NEXT_PUBLIC_LIVEKIT_URL, "Supabase + LiveKit env required");
 
@@ -48,7 +48,7 @@ test("a host already in the call sees and hears the guest who just accepted the 
   });
   await gabe.setViewportSize({ width: 390, height: 844 });
   await acceptInvite(gabe, invite);
-  await gabe.getByRole("button", { name: "Join call" }).click();
+  await pressJoinCall(gabe);
   await expect(gabe.getByTestId("meeting-room")).toBeVisible({ timeout: 20_000 });
 
   await expectVideoPlaying(hana, '[data-testid="tile-remote"]');

@@ -69,7 +69,7 @@ export function Composer({
   }
 
   return (
-    <div className="border-t border-border p-2">
+    <div className="border-t border-border p-2 max-sm:pb-[max(0.5rem,env(safe-area-inset-bottom))]">
       {reply && (
         <div
           className="mb-2 flex items-center gap-2 rounded-xl border-l-3 border-violet bg-ink-1/70 px-3 py-1.5 text-xs"

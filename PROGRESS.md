@@ -283,6 +283,31 @@ Deployed 2026-11-05 to https://duo-virid-eta.vercel.app; the new specs, call and
 - _Verified:_ `account.spec.ts` (reset link opened in a different browser context, single use, old password refused,
   change password, robots/sitemap/preview card, private pages noindex).
 
+## Phone layout (2026-11-09)
+
+On phones (under 640 px, so the iPhone app, the Android app and phone browsers) DUO now looks like an app instead of a
+squeezed website. Desktop is unchanged.
+
+- **Rooms:** a large title, rooms as list rows (person, room, live status, chevron), a + button, the invite box under the
+  list, and a bottom tab bar (Rooms / Settings). Settings gets the same title and tab bar.
+- **A room is its chat.** Native top bar: back chevron, your person and their status ("Here in the room", "In a call",
+  "typing…"), and a call button (a green Join when they're already in a call). Chat / Media / Moments / Lists are a
+  segmented control. Tapping your person opens the room's info as a bottom sheet.
+- **Calls start from a sheet:** a portrait camera preview with mic, camera and switch-camera buttons, the mic check,
+  Filters, and Join pinned to the bottom. No camera / mic / speaker lists. The camera only starts when the sheet opens.
+- **In a call:** your person edge to edge, you in a corner under the header, header and controls floating over the video
+  and fading after 5 s (tap to bring them back), no pin buttons or Pop out, Switch camera in More. Leaving goes back
+  to the chat.
+- **Messages:** actions (reply, react, copy, save, edit, delete) come up on a long-press with a small vibration, with
+  bigger buttons, instead of on hover or tap.
+- **No web feel:** no zoom when a field is focused (16 px inputs), no page rubber-banding, no tap flash, no text
+  selection or callouts on controls, safe-area padding (viewport-fit=cover). The iOS app also turns off pinch-zoom and
+  link previews. Browser wording ("address bar", "this browser", "Hover…") replaced where phones see it.
+
+Verified by `phone.spec.ts` (390×844 touch): home rows and tab bar, the room as chat with no camera running, info sheet,
+call sheet starting the camera, joining, full-width remote video, and Leave returning to the chat. Screens reviewed from
+`phone-audit.spec.ts` (`DUO_PHONE_AUDIT=<dir>`).
+
 ## Separate dev database (2026-11-09)
 
 Dev, local E2E and production no longer share one Supabase project. Production stays on "Duo"; `.env.local` points at

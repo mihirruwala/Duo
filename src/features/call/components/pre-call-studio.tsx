@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, Mic, MicOff, Sparkles, Video, VideoOff, Volume2 } from "lucide-react";
+import { ChevronRight, Loader2, Mic, MicOff, SwitchCamera, Sparkles, Video, VideoOff, Volume2 } from "lucide-react";
 import { ComingSoon } from "@/components/duo/coming-soon";
 import { DuoAvatar } from "@/components/duo/avatar";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,8 @@ type Props = {
   /** Live "where is my person" (absent when chat/presence isn't available). */
   presence?: PartnerPresence;
   onKnock?: () => boolean;
+  /** "sheet": the phone call sheet (portrait preview, no device lists, Join pinned to the bottom). */
+  variant?: "page" | "sheet";
 };
 
 export function PreCallStudio({
@@ -43,6 +45,7 @@ export function PreCallStudio({
   aside,
   presence,
   onKnock,
+  variant = "page",
 }: Props) {
   const media = usePreviewMedia();
   const { prefs, video, audio, devices } = media;
@@ -57,6 +60,117 @@ export function PreCallStudio({
     } finally {
       setTesting(false);
     }
+  }
+
+  // Phones: switch between the front and back camera instead of picking from a list.
+  const canFlip = devices.cameras.length > 1 && prefs.cameraOn && !!video;
+  function flipCamera() {
+    const list = devices.cameras;
+    const i = list.findIndex((d) => d.deviceId === prefs.cameraId);
+    const next = list[(i + 1) % list.length];
+    if (next) void media.selectCamera(next.deviceId);
+  }
+
+  if (variant === "sheet") {
+    return (
+      <div className="flex min-h-full flex-col gap-3 px-4">
+        {partnerName && presence && onKnock && (
+          <PresenceBanner
+            partnerName={partnerName}
+            presence={presence}
+            onJoin={() => onJoin(prefs)}
+            onKnock={onKnock}
+            joining={joining}
+          />
+        )}
+        <div className="relative mx-auto aspect-[3/4] max-h-[58dvh] w-full overflow-hidden rounded-[1.75rem] bg-ink-0 ring-1 ring-white/8">
+          {video ? (
+            <LocalVideo track={video} />
+          ) : (
+            <div className="grid h-full place-items-center">
+              <div className="flex flex-col items-center gap-3 px-6 text-center">
+                <DuoAvatar name={myName} hue={myHue} size="xl" />
+                <p className="text-sm text-muted-foreground">
+                  {media.starting ? "Starting camera…" : (media.videoError ?? "Camera is off")}
+                </p>
+              </div>
+            </div>
+          )}
+          <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-4 bg-gradient-to-t from-black/60 to-transparent p-4">
+            <ToggleButton
+              on={prefs.micOn && !!audio}
+              onLabel="Turn off microphone"
+              offLabel="Turn on microphone"
+              OnIcon={Mic}
+              OffIcon={MicOff}
+              onClick={() => void media.setMicOn(!prefs.micOn)}
+            />
+            <ToggleButton
+              on={prefs.cameraOn && !!video}
+              onLabel="Turn off camera"
+              offLabel="Turn on camera"
+              OnIcon={Video}
+              OffIcon={VideoOff}
+              onClick={() => void media.setCameraOn(!prefs.cameraOn)}
+            />
+            {canFlip && (
+              <button
+                type="button"
+                onClick={flipCamera}
+                aria-label="Switch camera"
+                className="grid size-12 place-items-center rounded-full bg-white/15 text-white backdrop-blur active:scale-95"
+              >
+                <SwitchCamera className="size-5" />
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 rounded-2xl bg-ink-2 px-4 py-3">
+          <Mic className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+          <MicLevelMeter track={audio?.mediaStreamTrack} />
+          <span className="truncate text-sm text-muted-foreground">
+            {media.audioError ?? (audio ? "Mic is working" : "Microphone is off")}
+          </span>
+        </div>
+
+        {FEATURES.studio && (
+          <button
+            type="button"
+            onClick={() => setStudioOpen(true)}
+            data-testid="open-studio"
+            className="flex items-center gap-3 rounded-2xl bg-ink-2 px-4 py-3 text-left active:bg-ink-3"
+          >
+            <Sparkles className="size-4 text-mint" aria-hidden />
+            <span className="flex-1 text-[15px] font-semibold">Filters & backgrounds</span>
+            <span className="text-sm text-muted-foreground">{studioSummary(studio.config)}</span>
+            <ChevronRight className="size-4 text-muted-foreground" aria-hidden />
+          </button>
+        )}
+
+        {joinError && (
+          <p
+            role="alert"
+            className="rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+          >
+            {joinError}
+          </p>
+        )}
+
+        <div className="sticky bottom-0 mt-auto bg-ink-1 pt-2 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          <Button
+            size="lg"
+            variant="brand"
+            className="h-14 w-full rounded-2xl text-[17px]"
+            onClick={() => onJoin(prefs)}
+            disabled={joining || media.starting}
+          >
+            {joining && <Loader2 className="animate-spin" />} Join call
+          </Button>
+        </div>
+        <StudioPanel open={studioOpen} onOpenChange={setStudioOpen} track={video} stats={studio.stats} />
+      </div>
+    );
   }
 
   return (
@@ -224,7 +338,7 @@ function ToggleButton({
       aria-label={on ? onLabel : offLabel}
       aria-pressed={on}
       className={cn(
-        "grid size-11 place-items-center rounded-full backdrop-blur transition-colors",
+        "grid size-11 place-items-center rounded-full backdrop-blur transition-colors max-sm:size-12",
         on ? "bg-white/15 text-white hover:bg-white/25" : "bg-danger text-ink-0 hover:brightness-110",
       )}
     >

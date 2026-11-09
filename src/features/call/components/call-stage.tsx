@@ -103,12 +103,13 @@ export function CallStage({
   const tileClass = (s: Slot) =>
     cn(
       s === "a" || s === "b"
-        ? "aspect-video max-h-full w-full self-center"
+        ? "aspect-video max-h-full w-full self-center max-sm:mx-auto max-sm:w-[calc(100%-2rem)]"
         : s === "main"
-          ? "h-full min-h-0 w-full"
+          ? // Phones: edge to edge, like FaceTime.
+            "h-full min-h-0 w-full max-sm:rounded-none max-sm:ring-0"
           : s === "float"
-            ? // Phones: top-left, clear of the Chat button and the pin button. Larger screens: bottom-right.
-              "absolute top-3 left-3 z-10 aspect-[3/4] w-28 shadow-2xl sm:top-auto sm:right-3 sm:bottom-3 sm:left-auto sm:aspect-video sm:w-52"
+            ? // Phones: top-right, under the floating header. Larger screens: bottom-right.
+              "absolute top-[calc(env(safe-area-inset-top)+3.75rem)] right-3 z-10 aspect-[3/4] w-28 rounded-2xl shadow-2xl sm:top-auto sm:right-3 sm:bottom-3 sm:aspect-video sm:w-52"
             : "aspect-video w-full",
     );
   const small = (s: Slot) => s === "t1" || s === "t2" || s === "float";

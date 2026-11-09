@@ -12,6 +12,9 @@ import { ListsProvider } from "@/features/lists/lists-provider";
 import { FEATURES } from "@/shared/features";
 import { callTokenResponseSchema, type CallTokenResponse } from "@/shared/call";
 import type { DevicePrefs } from "../device-prefs";
+import { PhoneSheet } from "@/components/duo/phone-sheet";
+import { setPhoneSheet, usePhoneSheet } from "@/features/rooms/phone-room-store";
+import { usePhone } from "@/lib/use-phone";
 import { MeetingRoom, type LeaveReason } from "./meeting-room";
 import { PreCallStudio } from "./pre-call-studio";
 
@@ -53,7 +56,7 @@ export function RoomExperience({ slug, roomId, roomName, me, partner, gifsEnable
     <ChatProvider roomId={roomId} slug={slug} me={me} partner={partner}>
       <ListsProvider roomId={roomId}>
         {content}
-        <ChatDock roomId={roomId} gifsEnabled={gifsEnabled} />
+        <ChatDock roomId={roomId} roomName={roomName} gifsEnabled={gifsEnabled} />
       </ListsProvider>
     </ChatProvider>
   );
@@ -79,6 +82,10 @@ function RoomPhases({
   const [rejoining, setRejoining] = useState(false);
   const rejoins = useRef<number[]>([]);
   const router = useRouter();
+  const phone = usePhone();
+  const sheet = usePhoneSheet();
+  // Sheets belong to this room page only.
+  useEffect(() => () => setPhoneSheet(null), []);
 
   async function join(prefs: DevicePrefs) {
     setJoining(true);
@@ -86,6 +93,7 @@ function RoomPhases({
     try {
       const connection = await fetchToken(slug);
       setPhase({ kind: "call", connection, prefs });
+      setPhoneSheet(null);
     } catch (err) {
       setJoinError((err as Error).message);
     } finally {
@@ -140,7 +148,8 @@ function RoomPhases({
         prefs={prefs}
         roomName={roomName}
         partnerName={partnerName}
-        onLeave={(reason) => setPhase({ kind: "ended", reason })}
+        // On a phone, leaving just goes back to the chat; problems still get the full explanation.
+        onLeave={(reason) => setPhase(phone && reason.kind === "left" ? { kind: "precall" } : { kind: "ended", reason })}
         onRejoinNeeded={() => void rejoin(prefs)}
         rejoining={rejoining}
       />
@@ -148,7 +157,56 @@ function RoomPhases({
   }
 
   if (phase.kind === "ended") {
-    return <CallEnded reason={phase.reason} onRejoin={() => setPhase({ kind: "precall" })} />;
+    const back = () => setPhase({ kind: "precall" });
+    if (phone) {
+      return (
+        <PhoneSheet open title="Call ended" onClose={back}>
+          <CallEnded
+            reason={phase.reason}
+            onRejoin={() => {
+              back();
+              setPhoneSheet("call");
+            }}
+          />
+        </PhoneSheet>
+      );
+    }
+    return <CallEnded reason={phase.reason} onRejoin={back} />;
+  }
+
+  // Before hydration we don't know the screen size: render nothing rather than start a camera.
+  if (phone === null) return <div className="flex-1" />;
+
+  if (phone) {
+    // The chat is the room screen; the call setup and room details are sheets over it. The camera
+    // preview only exists while the call sheet is open.
+    return (
+      <>
+        <PhoneSheet
+          open={sheet === "call"}
+          full
+          title={partnerName ? `Call ${partnerName}` : "Video call"}
+          onClose={() => setPhoneSheet(null)}
+          testId="call-sheet"
+        >
+          <PreCallStudio
+            variant="sheet"
+            roomName={roomName}
+            myName={myName}
+            myHue={myHue}
+            partnerName={partnerName}
+            joining={joining}
+            joinError={joinError}
+            onJoin={(prefs) => void join(prefs)}
+            presence={chat?.partnerPresence}
+            onKnock={chat?.knock}
+          />
+        </PhoneSheet>
+        <PhoneSheet open={sheet === "info"} title={roomName} onClose={() => setPhoneSheet(null)} testId="room-info-sheet">
+          <div className="px-4 pb-6">{aside}</div>
+        </PhoneSheet>
+      </>
+    );
   }
 
   return (

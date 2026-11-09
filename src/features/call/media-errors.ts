@@ -6,7 +6,9 @@ export function describeMediaError(err: unknown, device: "camera" | "microphone"
     case "SecurityError":
       return device === "screen"
         ? "Screen sharing was cancelled or blocked."
-        : `DUO doesn't have permission to use your ${device}. Allow it from the camera icon in the address bar, then try again.`;
+        : inIOSApp()
+          ? `DUO doesn't have permission to use your ${device}. Turn it on in Settings → DUO, then try again.`
+          : `DUO doesn't have permission to use your ${device}. Allow it from the camera icon in the address bar, then try again.`;
     case "NotFoundError":
     case "OverconstrainedError":
       return `No ${device} found. Plug one in or pick another device.`;
@@ -16,6 +18,11 @@ export function describeMediaError(err: unknown, device: "camera" | "microphone"
     default:
       return `Couldn't start your ${device}.`;
   }
+}
+
+/** The DUO iPhone app (its web view adds "DUOiOS" to the user agent). */
+export function inIOSApp(): boolean {
+  return typeof navigator !== "undefined" && navigator.userAgent.includes("DUOiOS");
 }
 
 export function isUserCancel(err: unknown): boolean {
