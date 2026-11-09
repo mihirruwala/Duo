@@ -52,6 +52,48 @@ async function render(error?: string) {
     return;
   }
 
+  const syncButton = () =>
+    el("button", {
+      className: state.syncArmed ? "primary" : "ghost",
+      textContent: "Sync this tab's video with DUO",
+      onclick: async () => {
+        const res = await send<{ ok: boolean; message?: string }>({ type: "popup.sync", tabId: tab!.id });
+        if (res.ok) window.close();
+        else void render(res.message);
+      },
+    });
+
+  if (state.sync) {
+    app.append(
+      el(
+        "div",
+        { className: "card" },
+        el("p", { textContent: "Watching in sync:" }),
+        el("p", { className: "muted", textContent: state.sync.title }),
+      ),
+      el("p", {
+        className: "muted",
+        textContent: "Play, pause and skip here; your person's tab follows, and theirs leads yours.",
+      }),
+      el("button", {
+        className: "ghost",
+        textContent: "Stop syncing",
+        onclick: async () => {
+          await send({ type: "popup.stopSync" });
+          void render();
+        },
+      }),
+    );
+  }
+
+  // DUO asked for a show to sync: that comes first.
+  if (state.syncArmed && tab?.id !== undefined && tab.id !== state.sync?.tabId) {
+    app.append(
+      el("p", { textContent: "Open the show in this tab on your own account, then sync it. Your person does the same." }),
+      syncButton(),
+    );
+  }
+
   if (state.sharing) {
     app.append(
       el(
@@ -89,6 +131,12 @@ async function render(error?: string) {
         },
       }),
     );
+    if (!state.syncArmed && tab.id !== state.sync?.tabId) {
+      app.append(
+        el("p", { className: "muted", textContent: "Or, to watch a show together on your own accounts:" }),
+        syncButton(),
+      );
+    }
   }
   if (error) app.append(el("p", { className: "error", textContent: error }));
 }

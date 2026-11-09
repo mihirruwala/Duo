@@ -109,8 +109,11 @@ export class WatchSync {
     const s = this.player.getPlayerState();
     const playing = s === YT_STATE.PLAYING;
     const prev = this.lastTick;
+    // While a remote change settles, keep the baseline it set: re-reading the position here would
+    // swallow a seek the person makes in that window (it would look like no jump at all).
+    if (now < this.quietUntil && prev) return;
     this.lastTick = { at: now, time, playing };
-    if (now < this.quietUntil || !prev) return;
+    if (!prev) return;
 
     // A seek that didn't produce a state change (scrubbing while paused, or a jump while playing).
     // Falling behind the clock is buffering, not a seek: only a jump ahead or backwards counts.

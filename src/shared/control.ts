@@ -3,6 +3,7 @@
  * Everything here is pure and unit-tested. See docs/ARCHITECTURE.md §4.
  */
 import { z } from "zod";
+import { playbackSchema, tabInfoSchema } from "./tab-sync";
 
 export const PROTOCOL_VERSION = 1;
 export const CONTROL_TOPIC = "duo.ctl";
@@ -89,11 +90,26 @@ export const pageToExtensionSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("share.stopped") }),
   z.object({ type: z.literal("approval.request"), sessionId, controllerName: z.string().min(1).max(40) }),
   z.object({ type: z.literal("approval.dismiss"), sessionId }),
+  // Sync a show (extension 1.1+): the next popup click on a tab offers "Sync this tab".
+  z.object({ type: z.literal("sync.arm") }),
+  /** The other person played / paused / seeked: apply it in the synced tab. */
+  z.object({ type: z.literal("sync.remote"), state: playbackSchema }),
+  /** Ask the synced tab where it is (answered with a non-heartbeat sync.local). */
+  z.object({ type: z.literal("sync.snapshot") }),
+  z.object({ type: z.literal("sync.stop") }),
+  /** "Are you syncing a tab?" Answered with sync.linked if so. */
+  z.object({ type: z.literal("sync.query") }),
 ]);
 export type PageToExtension = z.infer<typeof pageToExtensionSchema>;
 
 export const extensionToPageSchema = z.discriminatedUnion("type", [
-  z.object({ type: z.literal("hello.ok"), version: z.number(), shortcut: z.string().max(32) }),
+  z.object({
+    type: z.literal("hello.ok"),
+    version: z.number(),
+    shortcut: z.string().max(32),
+    /** Added in 1.1; older builds don't send it. */
+    features: z.array(z.string().max(32)).max(16).optional(),
+  }),
   z.object({ type: z.literal("share.ready"), streamId: z.string().min(1).max(512), tabTitle: z.string().max(200) }),
   z.object({ type: z.literal("share.cleared"), reason: z.string().max(64) }),
   z.object({ type: z.literal("control.started"), sessionId }),
@@ -101,6 +117,12 @@ export const extensionToPageSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("control.error"), sessionId, message: z.string().max(200) }),
   z.object({ type: z.literal("approval.response"), sessionId, approved: z.boolean() }),
   z.object({ type: z.literal("emergency.stop") }),
+  z.object({ type: z.literal("sync.linked"), tab: tabInfoSchema }),
+  /** Play / pause / seek done in the synced tab (or a snapshot / heartbeat). */
+  z.object({ type: z.literal("sync.local"), state: playbackSchema }),
+  /** Whether a video was found, and whether the browser wants a click before it will play. */
+  z.object({ type: z.literal("sync.status"), video: z.boolean(), needsGesture: z.boolean() }),
+  z.object({ type: z.literal("sync.unlinked"), reason: z.string().max(64) }),
 ]);
 export type ExtensionToPage = z.infer<typeof extensionToPageSchema>;
 

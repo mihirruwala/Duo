@@ -57,6 +57,8 @@ import { useAnnounceCall, useWatchSuggestions, WATCH_EVENT, type WatchRequest } 
 import { ScreenShareStage } from "./screen-share-stage";
 import { cameraOptionsFor, useHangout } from "../hangout/use-hangout";
 import { HangoutBanner, PartnerModeChip, SleepScreen } from "../hangout/hangout-ui";
+import { useTabSync } from "../tab-sync/use-tab-sync";
+import { TabSyncBanner, TabSyncDialog } from "../tab-sync/tab-sync-ui";
 
 export type LeaveReason = { kind: "left" } | { kind: "duplicate" } | { kind: "removed" } | { kind: "failed"; message: string };
 
@@ -270,6 +272,7 @@ function CallLayout({ roomName, partnerName, onLeave }: { roomName: string; part
   // Phones (Android Chrome, iOS Safari) can't share a screen from a web page: hide it there.
   const [canShare] = useState(() => FEATURES.screenShare && typeof navigator.mediaDevices?.getDisplayMedia === "function");
   const watch = useWatchTogether();
+  const tabSync = useTabSync();
   const [watchDialog, setWatchDialog] = useState(false);
   const watchSuggestions = useWatchSuggestions();
   const chat = useMaybeChat();
@@ -465,6 +468,16 @@ function CallLayout({ roomName, partnerName, onLeave }: { roomName: string; part
         }
       : null;
 
+  function startTabSync() {
+    // You're about to switch to the show's tab: keep your person's face on top.
+    if (pipSupported() && !pip.pipWindow) void pip.open();
+    tabSync.start();
+  }
+  function leaveCall() {
+    if (tabSync.mine) tabSync.stop();
+    onLeave();
+  }
+
   const setHangoutMode = hangout.setMode;
   const wake = useCallback(() => setHangoutMode("hangout"), [setHangoutMode]);
 
@@ -515,6 +528,8 @@ function CallLayout({ roomName, partnerName, onLeave }: { roomName: string; part
           <WifiOff className="size-4" /> Your connection dropped. Reconnecting automatically, hang tight.
         </div>
       )}
+
+      <TabSyncBanner sync={tabSync} onStart={startTabSync} />
 
       {hangout.mode === "hangout" && (
         <HangoutBanner onSleep={() => hangout.setMode("sleep")} onOff={() => hangout.setMode("normal")} />
@@ -573,7 +588,7 @@ function CallLayout({ roomName, partnerName, onLeave }: { roomName: string; part
           onWatch={() => setWatchDialog(true)}
           watching={!!watch.session}
           watchBlockedBy={share ? "Stop the screen share to watch together" : null}
-          onLeave={onLeave}
+          onLeave={leaveCall}
         />
       </footer>
       <WatchDialog
@@ -583,7 +598,9 @@ function CallLayout({ roomName, partnerName, onLeave }: { roomName: string; part
         suggestions={watchSuggestions}
         onStart={(videoId, start) => watch.open(videoId, start)}
         onShareTab={share || !canShare ? undefined : () => void startWatchShare()}
+        onSyncTab={canShare && !tabSync.mine ? startTabSync : undefined}
       />
+      <TabSyncDialog sync={tabSync} />
       <CallPip
         pipWindow={pip.pipWindow}
         notice={fun.pauseAsk ? { text: `${fun.pauseAsk.name} asked you to pause`, onDismiss: fun.dismissPauseAsk } : null}

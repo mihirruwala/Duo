@@ -21,7 +21,7 @@ const e2e = process.argv.includes("--e2e");
 const store = process.argv.includes("--store");
 if (e2e && store) throw new Error("--e2e and --store can't be combined");
 const out = join(root, "extension", e2e ? "dist-e2e" : store ? "dist-store" : "dist");
-const VERSION = "1.0.1";
+const VERSION = "1.1.0";
 
 const origins = (process.env.DUO_EXTENSION_ORIGINS || "http://localhost:3000,http://localhost:3001")
   .split(",")
@@ -46,7 +46,11 @@ rmSync(out, { recursive: true, force: true });
 mkdirSync(out, { recursive: true });
 
 await build({
-  entryPoints: { background: join(root, "extension/src/background.ts"), popup: join(root, "extension/src/popup.ts") },
+  entryPoints: {
+    background: join(root, "extension/src/background.ts"),
+    popup: join(root, "extension/src/popup.ts"),
+    "sync-content": join(root, "extension/src/sync-content.ts"),
+  },
   outdir: out,
   bundle: true,
   format: "esm",
@@ -61,16 +65,20 @@ const manifest = {
   manifest_version: 3,
   name: e2e ? "DUO Control (E2E)" : "DUO Control",
   version: VERSION,
-  description: "Lets the person you're on a DUO call with control one tab you share, only after you approve.",
+  description:
+    "Connects one browser tab to your DUO call: let your person control it (after you approve), or watch a show in sync.",
   minimum_chrome_version: "116",
   // The key pins the unpacked extension's ID for development; the Web Store assigns its own.
   ...(store ? {} : { key: readFileSync(join(root, "extension/manifest-key.txt"), "utf8").trim() }),
   // Least privilege: no host permissions, no "tabs" (activeTab covers the one tab you pick).
+  //  - scripting: put the small sync script into the one tab you picked to sync (needs that same activeTab click)
   //  - debugger: inject trusted input into the shared tab (see docs/EXTENSION.md)
   //  - tabCapture: stream exactly that tab to DUO
   //  - activeTab: temporary access to the tab you clicked the extension on
   //  - notifications: approval prompt when DUO isn't in front
-  permissions: ["debugger", "tabCapture", "activeTab", "notifications"],
+  permissions: ["debugger", "tabCapture", "activeTab", "notifications", "scripting"],
+  // The E2E build can't click the popup, so it gets access to the local test site instead.
+  ...(e2e ? { host_permissions: ["http://127.0.0.1/*"] } : {}),
   background: { service_worker: "background.js", type: "module" },
   action: {
     default_popup: "popup.html",

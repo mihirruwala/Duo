@@ -16,6 +16,7 @@ type Listener = (msg: ExtensionToPage) => void;
 let port: chrome.runtime.Port | null = null;
 let status: BridgeStatus = "checking";
 let shortcut = "";
+let features: readonly string[] = [];
 const statusListeners = new Set<() => void>();
 const messageListeners = new Set<Listener>();
 let helloTimer: ReturnType<typeof setTimeout> | undefined;
@@ -45,6 +46,7 @@ function connect() {
     if (msg.type === "hello.ok") {
       clearTimeout(helloTimer);
       shortcut = msg.shortcut;
+      features = msg.features ?? [];
       setStatus("connected");
     }
     messageListeners.forEach((l) => l(msg));
@@ -70,6 +72,11 @@ export function retryExtension() {
   port = null;
   setStatus("checking");
   connect();
+}
+
+/** Whether the installed extension supports something newer than 1.0 (e.g. "sync"). */
+export function extensionHas(feature: string): boolean {
+  return status === "connected" && features.includes(feature);
 }
 
 export function emergencyShortcut(): string {

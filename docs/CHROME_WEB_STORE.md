@@ -33,7 +33,7 @@ Upload `extension/duo-control-1.0.0.zip`. Images are in `extension/store-assets/
 
 **Summary** (132 characters max):
 
-> Let the person you're on a DUO call with click, scroll and type in one tab you share. Only after you approve.
+> Connect one tab to your DUO call: let your person control it (only after you approve), or watch a show in sync.
 
 **Category:** Communication. **Language:** English.
 
@@ -45,9 +45,15 @@ Upload `extension/duo-control-1.0.0.zip`. Images are in `extension/store-assets/
 > Studio, react with emoji and snap photo-booth pictures. Rooms are invite-only and there's never room for a third
 > person.
 >
-> DUO Control is DUO's companion extension, and it adds one thing: your person can take over a browser tab you share.
-> Click, scroll, type, drag. Handy for helping with a form, a setting or a website while you're on a call. DUO works
-> fully without it; you only need it to hand over control.
+> DUO Control is DUO's companion extension. It connects one browser tab you pick to your DUO call, in one of two ways:
+>
+> • Hand over control: your person can click, scroll, type and drag in a tab you share. Handy for helping with a form,
+> a setting or a website while you're on a call.
+> • Sync a show: you each open the same show on your own account (Netflix, Disney+, Prime Video or any site with a
+> video), and DUO keeps play, pause and skipping in step. The show plays in your own tab at full quality; only "play /
+> pause at this second" goes over the call.
+>
+> DUO works fully without it; you only need it for these two things.
 >
 > How it works
 > • In a DUO call, choose "Share a tab they can control", then click DUO Control on the tab you want to share.
@@ -55,8 +61,13 @@ Upload `extension/duo-control-1.0.0.zip`. Images are in `extension/store-assets/
 > • While they're in control you see a red banner with a countdown and a Revoke button. Pressing ⇧⌘9 (Ctrl+Shift+9 on
 > Windows) stops it from anywhere, even outside Chrome.
 >
+> To sync a show, open it in a tab, click DUO Control and press "Sync this tab's video with DUO". Your person does the
+> same on their computer.
+>
 > What the extension can and can't do
 > • Only the one tab you picked. Never other tabs, other apps or browser settings.
+> • When syncing a show, it only reads and sets the video's position and play/pause, plus the tab's title so your person
+> can see what you're watching.
 > • Pasting and browser shortcuts are blocked, so your clipboard stays yours.
 > • Chrome shows a "DUO Control started debugging this browser" bar while control is on. That's expected: it's how the
 > input reaches the page.
@@ -71,17 +82,20 @@ store reviews what the code does, and an extension has to have one narrow purpos
 
 **Single purpose:**
 
-> Lets the other person in a DUO video call view and, after the user approves, control one browser tab the user chose to
-> share.
+> Connects one browser tab the user picks to their DUO video call, so the other person can view and (after the user
+> approves) control it, or so a video playing in it stays in sync with the other person's.
+
+(From 1.1.0. Both uses are the same narrow purpose: one user-picked tab, joined to the user's own DUO call.)
 
 **Permission justifications:**
 
-| Permission      | Justification                                                                                                                                                                                                                                                                                                              |
-| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `debugger`      | Delivers the approved person's mouse and keyboard input to the one tab the user shared, as real input events (Input.dispatchMouseEvent / dispatchKeyEvent). Attached only to that tab, only while the user has approved a control session, and detached as soon as it ends. Synthetic DOM events don't work on most sites. |
-| `tabCapture`    | Captures the picture and sound of the tab the user chose to share, so the other person in the call can see it.                                                                                                                                                                                                             |
-| `activeTab`     | Gives temporary access to the tab the user clicked the extension on. That's how the user picks which tab to share; the extension has no host permissions.                                                                                                                                                                  |
-| `notifications` | Tells the user when the other person asks for control while DUO isn't the window in front, with Approve and Deny buttons.                                                                                                                                                                                                  |
+| Permission      | Justification                                                                                                                                                                                                                                                                                                                                                |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `debugger`      | Delivers the approved person's mouse and keyboard input to the one tab the user shared, as real input events (Input.dispatchMouseEvent / dispatchKeyEvent). Attached only to that tab, only while the user has approved a control session, and detached as soon as it ends. Synthetic DOM events don't work on most sites.                                   |
+| `tabCapture`    | Captures the picture and sound of the tab the user chose to share, so the other person in the call can see it.                                                                                                                                                                                                                                               |
+| `activeTab`     | Gives temporary access to the tab the user clicked the extension on. That's how the user picks which tab to share; the extension has no host permissions.                                                                                                                                                                                                    |
+| `scripting`     | Only when the user presses "Sync this tab's video with DUO" in the popup: adds a small script from the package to that one tab (using the activeTab grant from that click) that plays, pauses and seeks the page's video to match the other person, and reports the tab's title. Nothing is injected anywhere else, and there are still no host permissions. |
+| `notifications` | Tells the user when the other person asks for control while DUO isn't the window in front, with Approve and Deny buttons.                                                                                                                                                                                                                                    |
 
 **Remote code:** No, I am not using remote code. All code is in the package.
 
@@ -90,6 +104,8 @@ store reviews what the code does, and an extension has to have one narrow purpos
 - Website content: the shared tab's picture and sound are streamed into the user's own DUO call. Not stored.
 - User activity: the other person's clicks, scrolling and keystrokes are applied to the shared tab during an approved
   session. Not stored.
+- Website content (sync): the synced tab's title and site name, and the video's position and play/pause state, are sent
+  to the other person in the call. Not stored.
 
 Certify: not sold to third parties; not used or transferred for purposes unrelated to the single purpose; not used to
 determine creditworthiness or for lending.
@@ -115,6 +131,10 @@ into "Test instructions":
 >    and press "Share this tab with DUO".
 > 4. User B: press "Request control" on the shared screen. User A presses Approve. User B can now click, scroll and type
 >    in A's tab. Revoke, or ⇧⌘9 / Ctrl+Shift+9, ends it.
+> 5. Sync a show: both users open the same video page in a normal tab (any site with a video, e.g. a Wikimedia Commons
+>    video). User A: Watch together → "Sync a show", then on the video tab click DUO Control → "Sync this tab's video
+>    with DUO". User B: press "Sync my tab" in DUO and do the same on theirs. Play, pause or skip in either tab; the
+>    other follows.
 >
 > User A: … User B: …
 

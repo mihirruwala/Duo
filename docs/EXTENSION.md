@@ -50,6 +50,30 @@ Non-https origins are refused except localhost. Every other website gets no `chr
 Sessions also end by themselves after the room's limit (default **15 minutes**, hard cap 60), and when the tab navigates to a
 page that can't be controlled.
 
+## Sync a show (1.1)
+
+Watch Together for any site: you each open the same show on your own account (Netflix, Disney+, Prime Video, anything
+with a `<video>`), and play, pause and skipping stay in step. The show plays in your own tab at full quality, with its
+own sound; DRM isn't a problem because nothing is captured. **Both** people need the extension for this.
+
+1. In the call: **Watch together → Sync a show** (this also pops out your person's face).
+2. On the show's tab, click **DUO Control → Sync this tab's video with DUO**. Your person does the same ("Sync my tab"
+   on the banner in DUO).
+3. Whoever syncs second jumps to the first person's spot. From then on, whoever plays, pauses or skips leads, and the
+   other tab follows (same engine as YouTube Watch Together: `src/features/call/watch/watch-sync.ts`).
+
+How: the popup click gives `activeTab` access to that one tab, and the worker uses `scripting` to add
+`sync-content.js` to it. That script finds the biggest `<video>` (ignoring small ones like trailers), follows it if the
+player swaps it for a new episode, and talks only to the worker. Only the title (minus " | Netflix" and the like), the
+site name and "play / pause at t" leave the tab. Netflix's player crashes if its `<video>` is seeked directly, so on
+netflix.com the worker also adds a tiny helper in the page that seeks through Netflix's own player.
+
+It stops when either of you presses **Stop syncing**, closes or reloads the tab (a full page load removes the script;
+moving between episodes inside the player doesn't), leaves the call, or closes DUO.
+
+Limits: the video has to be in the tab's main page (players inside another site's iframe aren't reached, because
+`activeTab` only covers the page itself). Ads play out separately on each side.
+
 ## Permissions, and why
 
 | Permission      | Why                                                                                                                                                                                                                                                                                          |
@@ -57,6 +81,7 @@ page that can't be controlled.
 | `debugger`      | Delivers **trusted** mouse/keyboard input into the shared tab via the Chrome DevTools Protocol (`Input.dispatchMouseEvent`, `Input.dispatchKeyEvent`). Attached only while a session you approved is active, detached the moment it ends. Chrome shows a warning about this at install time. |
 | `tabCapture`    | Streams exactly the tab you picked to DUO.                                                                                                                                                                                                                                                   |
 | `activeTab`     | Gives temporary access to the tab you clicked the extension on: that click is how you pick the tab.                                                                                                                                                                                          |
+| `scripting`     | Sync a show: adds the sync script to the one tab you picked, using the `activeTab` grant from that popup click.                                                                                                                                                                              |
 | `notifications` | The approval prompt when DUO isn't the tab in front.                                                                                                                                                                                                                                         |
 
 **No host permissions** and no `tabs` permission: the extension can't read your other tabs or browsing history.

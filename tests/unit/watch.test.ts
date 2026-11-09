@@ -139,6 +139,23 @@ describe("WatchSync", () => {
     sync.dispose();
   });
 
+  it("a seek made right after a remote pause is still shared (regression)", () => {
+    const { p, now } = fakePlayer();
+    const sent: PlaybackState[] = [];
+    const sync = new WatchSync(p, (s) => sent.push(s), { driver: false, now });
+    p.advance(1000);
+    sync.tick();
+    // They pause at 0:30; we skip to 5:00 half a second later, while that pause is still settling.
+    sync.applyRemote({ at: 30, playing: false });
+    p.advance(500);
+    p.userSeek(300);
+    sync.tick();
+    p.advance(1000);
+    sync.tick();
+    expect(sent).toEqual([{ at: 300, playing: false }]);
+    sync.dispose();
+  });
+
   it("a buffering stall isn't mistaken for a seek", () => {
     const { p, now } = fakePlayer();
     const sent: PlaybackState[] = [];

@@ -98,11 +98,12 @@ test("Watch Together: one person starts a YouTube video, playback stays in sync 
 
   await hana.getByLabel("YouTube link").fill(VIDEO);
   await hana.getByRole("button", { name: "Start" }).click();
+  // The toast only stays a few seconds, so check it before waiting for YouTube to load.
+  await expect(gabe.getByText("Hana started Watch Together 🍿")).toBeVisible({ timeout: 10_000 });
   for (const p of [hana, gabe]) {
     await expect(p.getByTestId("watch-stage")).toHaveAttribute("data-video-id", "aqz-KE-bpKQ", { timeout: 20_000 });
     await expect(p.getByTestId("watch-stage")).toHaveAttribute("data-status", "ready", { timeout: 30_000 });
   }
-  await expect(gabe.getByText("Hana started Watch Together 🍿")).toBeVisible();
   await expect(gabe.getByText(/started by Hana/)).toBeVisible();
 
   // Both are playing the film itself (YouTube reports "playing"; a pre-roll ad shows as unstarted/buffering).

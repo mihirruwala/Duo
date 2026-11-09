@@ -283,6 +283,32 @@ Deployed 2026-11-05 to https://duo-virid-eta.vercel.app; the new specs, call and
 - _Verified:_ `account.spec.ts` (reset link opened in a different browser context, single use, old password refused,
   change password, robots/sitemap/preview card, private pages noindex).
 
+## Separate dev database (2026-11-09)
+
+Dev, local E2E and production no longer share one Supabase project. Production stays on "Duo"; `.env.local` points at
+"Duo dev" (same region, same migrations, auto-confirmed sign-ups, localhost redirect URLs). Runs against the live site
+(`E2E_BASE_URL=https://duoforyou.cv`) read production keys from the git-ignored `.env.live`. Realtime "Allow public
+access" is off on both: every channel DUO uses is private. Details and commands: docs/ENVIRONMENTS.md.
+
+## Sync a show (2026-11-09, DUO Control 1.1.0)
+
+Watch Together for any site, each person on their own account. In a call: Watch together → **Sync a show**, then
+DUO Control → **Sync this tab's video with DUO** on the show's tab; the other person does the same from the banner.
+
+- The extension adds a small script to that one tab (the popup click's `activeTab` grant plus the new `scripting`
+  permission, still no host permissions). It runs the same `WatchSync` engine as YouTube Watch Together against the
+  page's biggest `<video>`, and follows it when the player swaps it.
+- Only the tab's title (minus " | Netflix" etc.), its site, and "play / pause at t" go over the call.
+- Whoever syncs second jumps to the first person's position. Either can lead after that.
+- Netflix: seeks go through Netflix's own player API from a tiny in-page helper (seeking its `<video>` crashes it).
+- Stops on Stop syncing, tab closed or reloaded, Leave, or DUO closed. Survives a call reconnect.
+- DUO shows "Update DUO Control" to people on 1.0.x (they lack the `sync` feature flag in `hello.ok`).
+
+Verified by `tab-sync.spec.ts`: two browsers each with the extension and a stand-in streaming page; the second person
+catches up, pause / seek-while-paused / play follow both ways, and Stop syncing releases the other tab. Unit tests for the
+message schemas and title cleanup. Not verified: real Netflix, Disney+ and Prime pages (needs accounts), so the
+Netflix seek helper is untested.
+
 ## Hang-out mode (2026-11-08)
 
 For leaving the call on for hours. The sofa button in the call bar (or More on phones) turns it on, per person:
@@ -396,7 +422,8 @@ Seen once and passed on rerun: the XSS spec (one link missing from the list) and
 
 ## Known issues / decisions
 
-- No Docker on the dev machine, so local Supabase is unavailable. Using hosted Supabase for dev (see ARCHITECTURE §6).
+- No Docker on the dev machine, so local Supabase is unavailable. Dev and E2E use a separate hosted project, "Duo dev"
+  (docs/ENVIRONMENTS.md).
 - Dev uses **LiveKit Cloud**. `npm run livekit` (native server via Homebrew's verified bottle) exists but was not run here;
   the tool sandbox blocked executing a downloaded binary.
 - Calls are end-to-end encrypted against the media server (LiveKit) by default. The key lives in Supabase, so this doesn't

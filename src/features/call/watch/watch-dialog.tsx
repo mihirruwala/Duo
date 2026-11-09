@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Clapperboard, Play, Popcorn } from "lucide-react";
+import { Clapperboard, Play, Popcorn, Tv } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -18,6 +18,7 @@ export function WatchDialog({
   suggestions = [],
   changing = false,
   onShareTab,
+  onSyncTab,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -26,6 +27,8 @@ export function WatchDialog({
   changing?: boolean;
   /** For anything that isn't on YouTube: share the tab it plays in (Watch mode). */
   onShareTab?: () => void;
+  /** Netflix etc. on each person's own account, kept in step by the extension. */
+  onSyncTab?: () => void;
 }) {
   const [link, setLink] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -103,6 +106,25 @@ export function WatchDialog({
                   </li>
                 ))}
               </ul>
+            </div>
+          )}
+          {onSyncTab && (
+            <div className="mt-3 flex items-center gap-3 rounded-2xl bg-ink-1/70 p-3 text-sm">
+              <Tv className="size-5 shrink-0 text-mint" aria-hidden />
+              <span className="flex-1 text-muted-foreground">
+                Netflix, Disney+ or another site? Each watch on your own account, kept in sync.
+              </span>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  onOpenChange(false);
+                  onSyncTab();
+                }}
+              >
+                Sync a show
+              </Button>
             </div>
           )}
           {onShareTab && (

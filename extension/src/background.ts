@@ -23,6 +23,7 @@ import {
   type ExtensionToPage,
   type InputEvent,
 } from "../../src/shared/control";
+import { cleanTitle, seekNeedsPlayerApi, type TabInfo } from "../../src/shared/tab-sync";
 import { OVERLAY_SOURCE } from "./overlay";
 
 declare const __DUO_ORIGINS__: string[];
@@ -50,7 +51,11 @@ const state: {
   targetTabId: number | null;
   targetTitle: string;
   session: Session | null;
-} = { port: null, duoTabId: null, targetTabId: null, targetTitle: "", session: null };
+  /** Sync a show: the one tab whose video is kept in step with the other person's. */
+  sync: { tabId: number; tab: TabInfo } | null;
+  /** DUO asked for a tab to sync; the popup leads with that button. */
+  syncArmed: boolean;
+} = { port: null, duoTabId: null, targetTabId: null, targetTitle: "", session: null, sync: null, syncArmed: false };
 
 // ── Messaging with the DUO page ─────────────────────────────────────────────
 
@@ -82,6 +87,7 @@ chrome.runtime.onConnectExternal.addListener((port) => {
     if (state.port !== port) return;
     // Fail safe: if the DUO page goes away (closed, reloaded, crashed) control ends immediately.
     clearShare("extension_disconnected");
+    stopSync("extension_disconnected");
     state.port = null;
     state.duoTabId = null;
     void updateBadge();
@@ -94,7 +100,28 @@ async function onPageMessage(raw: unknown) {
   const msg = parsed.data;
   switch (msg.type) {
     case "hello":
-      post({ type: "hello.ok", version: PROTOCOL_VERSION, shortcut: await shortcutLabel() });
+      post({ type: "hello.ok", version: PROTOCOL_VERSION, shortcut: await shortcutLabel(), features: ["sync"] });
+      // A reloaded DUO page picks up a sync that's still running.
+      if (state.sync) post({ type: "sync.linked", tab: state.sync.tab });
+      return;
+    case "sync.arm":
+      state.syncArmed = true;
+      return;
+    case "sync.remote":
+      if (state.sync) await toContent({ type: "content.remote", state: msg.state });
+      return;
+    case "sync.snapshot": {
+      if (!state.sync) return;
+      const snap = (await toContent({ type: "content.snapshot" })) as { at: number; playing: boolean } | null | undefined;
+      if (snap && Number.isFinite(snap.at))
+        post({ type: "sync.local", state: { at: Math.max(0, snap.at), playing: !!snap.playing } });
+      return;
+    }
+    case "sync.stop":
+      stopSync("stopped");
+      return;
+    case "sync.query":
+      if (state.sync) post({ type: "sync.linked", tab: state.sync.tab });
       return;
     case "control.start":
       return startSession(msg.sessionId, msg.controllerName, msg.expiresAt);
@@ -172,6 +199,83 @@ function clearShare(reason: string) {
 
 chrome.tabs.onRemoved.addListener((tabId) => {
   if (tabId === state.targetTabId) clearShare("tab_closed");
+  if (tabId === state.sync?.tabId) stopSync("tab_closed");
+});
+
+// ── Sync a show ─────────────────────────────────────────────────────────────
+
+async function toContent(msg: object): Promise<unknown> {
+  if (!state.sync) return undefined;
+  try {
+    return await chrome.tabs.sendMessage(state.sync.tabId, msg);
+  } catch {
+    return undefined; // the page reloaded and the script is gone; the onUpdated check notices
+  }
+}
+
+/** Runs in the page itself (Netflix only): seek through Netflix's own player, which survives it. */
+function installNetflixSeek() {
+  const w = window as unknown as { __duoNetflixSeek?: boolean; netflix?: unknown };
+  if (w.__duoNetflixSeek) return;
+  w.__duoNetflixSeek = true;
+  window.addEventListener("message", (e: MessageEvent) => {
+    if (e.source !== window || (e.data as { __duo?: string })?.__duo !== "seek") return;
+    const ms = Number((e.data as { ms?: number }).ms);
+    if (!Number.isFinite(ms) || ms < 0) return;
+    try {
+      type Api = {
+        videoPlayer: { getAllPlayerSessionIds(): string[]; getVideoPlayerBySessionId(id: string): { seek(ms: number): void } };
+      };
+      const app = (w.netflix as { appContext: { state: { playerApp: { getAPI(): Api } } } }).appContext.state.playerApp;
+      const vp = app.getAPI().videoPlayer;
+      const id = vp.getAllPlayerSessionIds().find((x) => x.startsWith("watch")) ?? vp.getAllPlayerSessionIds()[0];
+      if (id) vp.getVideoPlayerBySessionId(id).seek(Math.round(ms));
+    } catch {
+      // Netflix changed its player; seeking just won't sync.
+    }
+  });
+}
+
+async function syncTab(
+  tabId: number,
+  url: string | undefined,
+  title: string,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  if (!state.port || state.duoTabId === null) return { ok: false, message: "Open your DUO call first, then try again." };
+  if (tabId === state.duoTabId) return { ok: false, message: "Pick the tab playing the show, not the DUO tab." };
+  if (!isControllableUrl(url, DUO_ORIGINS).ok)
+    return { ok: false, message: "This kind of page can't be synced (browser, extension and DUO pages are off-limits)." };
+  const host = new URL(url!).hostname;
+  if (state.sync && state.sync.tabId !== tabId) stopSync("superseded");
+  try {
+    // Needs the activeTab grant from the popup click: the person picked exactly this tab.
+    if (seekNeedsPlayerApi(host))
+      await chrome.scripting.executeScript({ target: { tabId }, world: "MAIN", func: installNetflixSeek });
+    await chrome.scripting.executeScript({ target: { tabId }, files: ["sync-content.js"] });
+  } catch (err) {
+    return { ok: false, message: `Chrome didn't allow DUO on this tab: ${(err as Error).message}` };
+  }
+  state.sync = { tabId, tab: { title: cleanTitle(title), host } };
+  state.syncArmed = false;
+  post({ type: "sync.linked", tab: state.sync.tab });
+  await updateBadge();
+  return { ok: true };
+}
+
+function stopSync(reason: string) {
+  if (!state.sync) return;
+  void toContent({ type: "content.stop" });
+  state.sync = null;
+  post({ type: "sync.unlinked", reason });
+  void updateBadge();
+}
+
+// A full page load wipes the injected script (a single-page app's own navigation doesn't).
+chrome.tabs.onUpdated.addListener((tabId, info) => {
+  if (tabId !== state.sync?.tabId || info.status !== "complete") return;
+  void toContent({ type: "content.ping" }).then((r) => {
+    if (!r && tabId === state.sync?.tabId) stopSync("tab_reloaded");
+  });
 });
 
 // ── Control sessions ────────────────────────────────────────────────────────
@@ -427,6 +531,10 @@ async function updateBadge() {
     await chrome.action.setBadgeBackgroundColor({ color: "#a593ff" });
     await chrome.action.setBadgeText({ text: "ON" });
     await chrome.action.setTitle({ title: "DUO: sharing a tab" });
+  } else if (state.sync) {
+    await chrome.action.setBadgeBackgroundColor({ color: "#5fd4b0" });
+    await chrome.action.setBadgeText({ text: "SYNC" });
+    await chrome.action.setTitle({ title: `DUO: syncing “${state.sync.tab.title || state.sync.tab.host}”` });
   } else {
     await chrome.action.setBadgeText({ text: "" });
     await chrome.action.setTitle({ title: "DUO Control" });
@@ -440,11 +548,19 @@ export type PopupState = {
   sharing: { tabId: number; title: string } | null;
   control: { controllerName: string; expiresAt: number } | null;
   shortcut: string;
+  sync: { tabId: number; title: string } | null;
+  syncArmed: boolean;
 };
 
 chrome.runtime.onMessage.addListener((msg: { type?: string; tabId?: number }, sender, reply) => {
-  // Only our own extension pages may talk to the worker this way.
-  if (sender.id !== chrome.runtime.id || !sender.url?.startsWith(chrome.runtime.getURL(""))) return;
+  if (sender.id !== chrome.runtime.id) return;
+  // The sync script, from exactly the tab it was injected into.
+  if (sender.tab?.id !== undefined && sender.tab.id === state.sync?.tabId) {
+    onContentMessage(msg);
+    return;
+  }
+  // Otherwise only our own extension pages may talk to the worker this way.
+  if (!sender.url?.startsWith(chrome.runtime.getURL(""))) return;
   void (async () => {
     switch (msg.type) {
       case "popup.state":
@@ -453,7 +569,19 @@ chrome.runtime.onMessage.addListener((msg: { type?: string; tabId?: number }, se
           sharing: state.targetTabId !== null ? { tabId: state.targetTabId, title: state.targetTitle } : null,
           control: state.session ? { controllerName: state.session.controllerName, expiresAt: state.session.expiresAt } : null,
           shortcut: await shortcutLabel(),
+          sync: state.sync ? { tabId: state.sync.tabId, title: state.sync.tab.title || state.sync.tab.host } : null,
+          syncArmed: state.syncArmed,
         } satisfies PopupState);
+        return;
+      case "popup.sync": {
+        if (typeof msg.tabId !== "number") return reply({ ok: false, message: "No tab." });
+        const tab = await chrome.tabs.get(msg.tabId).catch(() => undefined);
+        reply(await syncTab(msg.tabId, tab?.url, tab?.title ?? ""));
+        return;
+      }
+      case "popup.stopSync":
+        stopSync("stopped");
+        reply({ ok: true });
         return;
       case "popup.share":
         reply(typeof msg.tabId === "number" ? await shareTab(msg.tabId) : { ok: false, message: "No tab." });
@@ -470,6 +598,32 @@ chrome.runtime.onMessage.addListener((msg: { type?: string; tabId?: number }, se
   })();
   return true;
 });
+
+function onContentMessage(raw: unknown) {
+  const msg = raw as {
+    type?: string;
+    state?: { at?: unknown; playing?: unknown; hb?: unknown };
+    video?: unknown;
+    needsGesture?: unknown;
+    title?: unknown;
+  };
+  if (msg.type === "content.local" && msg.state) {
+    const at = Number(msg.state.at);
+    if (!Number.isFinite(at)) return;
+    post({
+      type: "sync.local",
+      state: { at: Math.max(0, at), playing: msg.state.playing === true, ...(msg.state.hb === true ? { hb: true } : {}) },
+    });
+  } else if (msg.type === "content.status") {
+    post({ type: "sync.status", video: msg.video === true, needsGesture: msg.needsGesture === true });
+  } else if (msg.type === "content.title" && typeof msg.title === "string" && state.sync) {
+    const title = cleanTitle(msg.title);
+    if (title === state.sync.tab.title) return;
+    state.sync.tab = { ...state.sync.tab, title };
+    post({ type: "sync.linked", tab: state.sync.tab });
+    void updateBadge();
+  }
+}
 
 // ── E2E-only hooks (compiled out of production builds) ──────────────────────
 
@@ -493,6 +647,13 @@ async function handleTestHook(raw: unknown): Promise<boolean> {
     state.targetTitle = t.title;
     post({ type: "share.ready", streamId: "e2e-stream", tabTitle: t.title });
     await updateBadge();
+    return true;
+  }
+  if (m.type === "test.bindSyncTab" && m.urlPrefix) {
+    // Stand-in for the popup's "Sync this tab" click (the E2E build has host access to the test site instead).
+    const targets = await chrome.debugger.getTargets();
+    const t = targets.find((x) => x.type === "page" && x.url.startsWith(m.urlPrefix!) && x.tabId !== undefined);
+    if (t?.tabId) await syncTab(t.tabId, t.url, t.title);
     return true;
   }
   if (m.type === "test.command" && m.command === "emergency-stop") {
