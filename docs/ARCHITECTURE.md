@@ -176,7 +176,7 @@ toast. The camera track is stopped on unmount and leave (checked by verifying `r
 1. **`cacheComponents` disabled.** The nonce-based CSP requires per-request rendering, and nearly
    every DUO route is authenticated and per-user anyway, so prerendering gives little benefit.
 2. **No Docker on the dev machine**, so local Supabase (`supabase start`) can't run. We use a hosted Supabase
-   project for dev. RLS is still tested locally by running the _real migrations_ inside PGlite
+   project for dev and E2E ("Duo dev"), separate from production ("Duo") since 2026-11-09: see docs/ENVIRONMENTS.md. RLS is still tested locally by running the _real migrations_ inside PGlite
    (Postgres compiled to WASM) with a minimal `auth`/`storage`/`realtime` schema stub.
    LiveKit dev runs the native `livekit-server --dev` binary (no Docker required).
 3. **Controllable sharing starts from the extension** (see §4). This is required to make the

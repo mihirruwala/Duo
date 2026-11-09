@@ -1,12 +1,27 @@
 import { loadEnvConfig } from "@next/env";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { defineConfig, devices } from "@playwright/test";
 
-// Same .env.local the app uses, so tests know whether a backend is configured.
+// Same .env.local the app uses (the dev Supabase project), so tests know whether a backend is configured.
 loadEnvConfig(process.cwd());
 
 const PORT = Number(process.env.E2E_PORT ?? 3100);
 /** E2E_BASE_URL=https://… runs the suite against a deployed site (no local server). */
 const REMOTE = process.env.E2E_BASE_URL;
+
+/**
+ * Against the live site, the tests' admin client (creating and deleting test users) has to talk to the
+ * production Supabase project, whose keys live in .env.live (git-ignored, never loaded by Next).
+ */
+if (REMOTE && !/localhost|127\.0\.0\.1/.test(REMOTE)) {
+  const live = join(process.cwd(), ".env.live");
+  if (!existsSync(live)) throw new Error("E2E_BASE_URL points at a deployed site: put its Supabase keys in .env.live first.");
+  for (const line of readFileSync(live, "utf8").split("\n")) {
+    const m = /^([A-Z0-9_]+)=(.*)$/.exec(line.trim());
+    if (m?.[1]) process.env[m[1]] = m[2] ?? "";
+  }
+}
 
 /**
  * E2E runs against a production build (so the real CSP applies).
