@@ -69,3 +69,7 @@ supabase/.branches
 # Android app (scripts/android-app.cjs): only the TWA manifest is kept; the rest is generated
 /android/*
 !/android/twa-manifest.json
+
+# iOS build output
+ios/build/
+ios/**/xcuserdata/
